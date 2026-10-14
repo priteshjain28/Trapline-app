@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +24,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -129,8 +132,12 @@ fun BottomNav(items: List<NavItem>, selected: Int, onSelect: (Int) -> Unit) {
                         Modifier.size(width = 56.dp, height = 28.dp).clip(Radius.lg).background(if (on) c.accentTint else c.bg),
                         contentAlignment = Alignment.Center,
                     ) { SiteIcon(item.icon, null, tint = if (on) c.accent else c.textMuted) }
-                    Text(item.label, Modifier.padding(top = Space.s1), style = SiteTheme.type.xs,
-                        color = if (on) c.accent else c.textMuted, maxLines = 1)
+                    // five labels share the width: let them grow to 1.3x, then stop, so they never run together
+                    val scale = LocalDensity.current.fontScale
+                    val xs = SiteTheme.type.xs
+                    Text(item.label, Modifier.padding(top = Space.s1, start = 2.dp, end = 2.dp),
+                        style = if (scale > 1.3f) xs.copy(fontSize = xs.fontSize * (1.3f / scale), lineHeight = xs.lineHeight * (1.3f / scale)) else xs,
+                        color = if (on) c.accent else c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -145,7 +152,9 @@ fun Tabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier:
             labels.forEachIndexed { i, label ->
                 val on = i == selected
                 Column(
-                    Modifier.heightIn(min = Size.touchMin).selectable(on, onClick = { onSelect(i) }, role = Role.Tab).padding(horizontal = Space.s3),
+                    // intrinsic width so the underline can fill the label's width inside the scrolling row
+                    Modifier.width(IntrinsicSize.Max).heightIn(min = Size.touchMin).selectable(on, onClick = { onSelect(i) }, role = Role.Tab)
+                        .padding(horizontal = Space.s3),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {

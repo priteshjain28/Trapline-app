@@ -108,8 +108,10 @@ fun Avatar(name: String, modifier: Modifier = Modifier, size: Dp = Size.avatarMd
         modifier.size(size).clip(if (square) Radius.md else CircleShape).background(bg),
         contentAlignment = Alignment.Center,
     ) {
-        Text(Format.initials(name), color = fg, style = if (size >= 40.dp) SiteTheme.type.sm.copy(fontWeight = FontWeight.W600)
-        else SiteTheme.type.xs.copy(fontWeight = FontWeight.W600))
+        // initials are sized to the circle, not to the text-size setting, so they never spill out
+        val fs = with(androidx.compose.ui.platform.LocalDensity.current) { (size * 0.38f).toSp() }
+        Text(Format.initials(name), color = fg, maxLines = 1,
+            style = SiteTheme.type.xs.copy(fontWeight = FontWeight.W600, fontSize = fs, lineHeight = fs * 1.2f))
     }
 }
 

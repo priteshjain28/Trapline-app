@@ -136,7 +136,8 @@ private fun TaskRow(t: Task, today: LocalDate, onClick: () -> Unit) {
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             val due = t.dueDate?.let { stringResource(R.string.task_due, Format.short(it)) }
-            Text(listOfNotNull(t.category, due).joinToString(" · "), style = SiteTheme.type.sm, color = c.textMuted, maxLines = 1)
+            Text(listOfNotNull(t.category, due).joinToString(" · "), style = SiteTheme.type.sm, color = c.textMuted, maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
         }
         when {
             t.status == TaskStatus.COMPLETED -> StatusBadge(stringResource(R.string.status_done), Tone.SUCCESS)

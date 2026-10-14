@@ -132,7 +132,8 @@ fun ProjectCard(p: Project, today: LocalDate, onClick: () -> Unit) {
                 Text("${p.progressPct}%", style = SiteTheme.type.sm.copy(fontWeight = FontWeight.W600), color = c.text)
                 Box(Modifier.weight(1f))
                 SiteIcon(R.drawable.ic_calendar, null, tint = c.textMuted, size = Size.iconSm)
-                Text(dates ?: stringResource(R.string.project_no_dates), style = SiteTheme.type.sm, color = c.textMuted, maxLines = 1)
+                Text(dates ?: stringResource(R.string.project_no_dates), style = SiteTheme.type.sm, color = c.textMuted, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
             }
         }
     }
