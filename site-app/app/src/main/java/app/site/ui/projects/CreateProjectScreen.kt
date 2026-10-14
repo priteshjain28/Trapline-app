@@ -19,6 +19,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.stringResource
 import app.site.LocalContainer
 import app.site.R
@@ -46,6 +48,8 @@ fun CreateProjectScreen(onBack: () -> Unit, onCreated: (String) -> Unit) {
     var address by rememberSaveable { mutableStateOf("") }
     var start by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     var end by rememberSaveable { mutableStateOf<LocalDate?>(null) }
+    var photo by rememberSaveable { mutableStateOf<String?>(null) }
+    val pickPhoto = app.site.ui.rememberImagePicker { photo = it }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
 
@@ -56,7 +60,7 @@ fun CreateProjectScreen(onBack: () -> Unit, onCreated: (String) -> Unit) {
                 PrimaryButton(stringResource(R.string.action_create_project), {
                     busy = true
                     scope.launch {
-                        container.projects.create(NewProject(name, address, start, end))
+                        container.projects.create(NewProject(name, address, start, end, photo))
                             .onSuccess { onCreated(it.id) }
                             .onFailure { error = it }
                         busy = false
@@ -81,6 +85,16 @@ fun CreateProjectScreen(onBack: () -> Unit, onCreated: (String) -> Unit) {
                 DateField(stringResource(R.string.field_end), end, { end = it; error = null }, Modifier.weight(1f),
                     placeholder = stringResource(R.string.field_date_optional), min = start, onClear = { end = null },
                     error = fieldError(error, "endDate"))
+            }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.s3)) {
+                photo?.let {
+                    coil.compose.AsyncImage(model = it, contentDescription = stringResource(R.string.a11y_site_photo),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.size(Size.thumb).clip(app.site.design.Radius.md))
+                }
+                app.site.design.components.SecondaryButton(
+                    stringResource(if (photo == null) R.string.action_add_site_photo else R.string.action_change_site_photo),
+                    pickPhoto, icon = R.drawable.ic_image_plus)
             }
         }
     }

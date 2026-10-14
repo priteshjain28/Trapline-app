@@ -184,11 +184,13 @@ private fun ago(then: Instant, now: Instant): String {
 
 /** S28: your name and number, and sign out. */
 @Composable
-fun ProfileScreen(onBack: () -> Unit) {
+fun ProfileScreen(onBack: () -> Unit, onCompany: () -> Unit = {}) {
     val container = LocalContainer.current
     val session by container.session.session.collectAsStateWithLifecycle()
     val c = SiteTheme.colors
     var name by rememberSaveable(session?.user?.id) { mutableStateOf(session?.user?.name.orEmpty()) }
+    var email by rememberSaveable(session?.user?.id) { mutableStateOf(session?.user?.email.orEmpty()) }
+    var saveError by remember { mutableStateOf<Throwable?>(null) }
     val scope = rememberCoroutineScope()
     var confirmDelete by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
@@ -201,10 +203,19 @@ fun ProfileScreen(onBack: () -> Unit) {
         ) {
             Avatar(s.user.name.ifBlank { "?" }, size = Size.avatarLg)
             SiteTextField(name, { name = it.take(60) }, stringResource(R.string.field_your_name), required = true)
-            PrimaryButton(stringResource(R.string.action_save), { scope.launch { container.session.completeProfile(name, null) } },
-                Modifier.fillMaxWidth(), enabled = name.isNotBlank() && name.trim() != s.user.name)
+            SiteTextField(email, { email = it.take(254); saveError = null }, stringResource(R.string.field_email),
+                placeholder = stringResource(R.string.field_email_placeholder), keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
+                error = app.site.ui.fieldError(saveError, "email"))
+            PrimaryButton(stringResource(R.string.action_save), {
+                scope.launch { container.session.updateProfile(name, email).onFailure { saveError = it } }
+            }, Modifier.fillMaxWidth(), enabled = name.isNotBlank() && (name.trim() != s.user.name || email.trim() != s.user.email.orEmpty()))
             ProfileLine(stringResource(R.string.field_phone), s.user.phone, verified = true)
-            ProfileLine(stringResource(R.string.profile_org), s.org?.name.orEmpty())
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onCompany).heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.profile_org), Modifier.weight(1f), style = SiteTheme.type.sm, color = c.textMuted)
+                Text(s.org?.name.orEmpty(), style = SiteTheme.type.base, color = c.text)
+                SiteIcon(R.drawable.ic_chevron_right, null, tint = c.textMuted, size = Size.iconSm)
+            }
             ProfileLine(stringResource(R.string.profile_role), stringResource((session?.orgRole ?: app.site.core.model.OrgRole.MEMBER).label()))
             SecondaryButton(stringResource(R.string.action_sign_out), { container.session.signOut() }, Modifier.fillMaxWidth(),
                 icon = R.drawable.ic_log_out)

@@ -36,7 +36,7 @@ sealed class AppError(message: String) : Exception(message) {
     /** The only owner can't leave while other people are in the organisation. */
     data object OwnerMustTransfer : AppError("owner must transfer")
 
-    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE, ALREADY_MEMBER }
+    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE, ALREADY_MEMBER, BAD_EMAIL }
 }
 
 interface SessionRepository {
@@ -45,6 +45,10 @@ interface SessionRepository {
     suspend fun verifyOtp(phone: String, code: String): Result<Session>
     /** First sign-in: set your name and, if you're not in one yet, create your organisation. Also used to rename. */
     suspend fun completeProfile(name: String, orgName: String?): Result<Session>
+    /** Your name and email. Works offline; the server gets it on the next sync. */
+    suspend fun updateProfile(name: String, email: String?): Result<Session>
+    /** Company name and logo (a local image URI). Owners and admins only. */
+    suspend fun updateOrganisation(name: String, logoUri: String?): Result<Session>
     /** Deletes the account for real (store requirement). */
     suspend fun deleteAccount(): Result<Unit>
     fun signOut()
@@ -75,6 +79,8 @@ interface ProjectRepository {
     fun project(id: String): Flow<Project?>
     suspend fun create(input: NewProject): Result<Project>
     suspend fun updateSettings(projectId: String, shiftHours: Double, attendanceRemarks: Boolean): Result<Unit>
+    /** The site's cover photo, from a local image URI. */
+    suspend fun setImage(projectId: String, uri: String): Result<Unit>
 }
 
 interface TaskRepository {

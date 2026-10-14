@@ -262,6 +262,44 @@ class SyncTest {
         assertIs<AppError.Offline>(a.app.invite(p.id, "9876511111", ProjectRole.VIEWER).exceptionOrNull())
     }
 
+    @Test fun sitePhotoProfileAndCompanySync() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val b = Phone("9876500000")
+        b.signIn(name = "Ravi", org = null)
+        val orgId = server.rows("organisations").first().s("id")!!
+        val ravi = server.rows("profiles").first { it.s("name") == "Ravi" }.s("id")!!
+        server.tables["org_members"]!!.values.removeIf { it.s("user_id") == ravi }
+        server.addMember(orgId, ravi)
+        b.app.verifyOtp(b.number, "123456").getOrThrow()
+
+        // a site with a cover photo, made offline
+        a.net.offline = true
+        a.files.content["content://cover"] = byteArrayOf(7)
+        val p = a.app.create(NewProject("Tower", imageUri = "content://cover")).getOrThrow()
+        assertEquals("content://cover", a.app.project(p.id).first()!!.imageRef)
+        a.app.updateProfile("Anita Rao", " Anita@Example.com ").getOrThrow()
+        a.files.content["content://logo"] = byteArrayOf(5)
+        a.app.updateOrganisation("Sharma Builders", "content://logo").getOrThrow()
+        assertEquals("content://logo", a.app.session.value!!.org!!.logoRef)
+
+        a.net.offline = false
+        a.sync(); b.sync()
+        val path = server.rows("projects").single().s("image_path")!!
+        assertTrue(path.startsWith("${p.id}/cover-"))
+        assertTrue(server.files.containsKey("project-media/$path"))
+        assertEquals("storage:project-media/$path", b.app.project(p.id).first()!!.imageRef, "B loads it from the server")
+        assertEquals("content://cover", a.app.project(p.id).first()!!.imageRef, "A keeps its own copy")
+        assertEquals("anita@example.com", server.table("profiles").values.first { it.s("name") == "Anita Rao" }.s("email"))
+        assertEquals("anita@example.com", b.app.people().first().values.first { it.name == "Anita Rao" }.email)
+        val org = server.table("organisations")[orgId]!!
+        assertEquals("Sharma Builders", org.s("name"))
+        assertTrue(server.files.containsKey("org-assets/${org.s("logo_path")}"))
+
+        // members can't rename the company
+        assertIs<AppError.NotAllowed>(b.app.updateOrganisation("Mine now", null).exceptionOrNull())
+        assertEquals(AppError.Reason.BAD_EMAIL, (b.app.updateProfile("Ravi", "not-an-email").exceptionOrNull() as AppError.Invalid).reason)
+    }
+
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {
         val a = Phone("9876543210").apply { signIn() }
         val p = a.app.create(NewProject("Tower")).getOrThrow()

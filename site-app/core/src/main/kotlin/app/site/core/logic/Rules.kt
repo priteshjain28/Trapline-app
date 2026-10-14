@@ -93,6 +93,18 @@ object Validate {
         }
     }
 
+    private val EMAIL = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+
+    /** Optional; blank means none. */
+    fun email(raw: String?): Result<String?> {
+        val e = raw?.trim().orEmpty()
+        return when {
+            e.isEmpty() -> Result.success(null)
+            e.length > 254 || !EMAIL.matches(e) -> fail("email", Reason.BAD_EMAIL)
+            else -> Result.success(e.lowercase())
+        }
+    }
+
     fun notFuture(date: LocalDate, today: LocalDate): Result<Unit> =
         if (date.isAfter(today)) fail("date", Reason.IN_FUTURE) else Result.success(Unit)
 

@@ -13,7 +13,8 @@ data class User(val id: String, val name: String, val phone: String, val email: 
 
 enum class Plan { FREE, PRO, PRO_PLUS, ADVANCED }
 
-data class Organisation(val id: String, val name: String, val plan: Plan = Plan.FREE)
+/** [logoRef]: a local URI until uploaded on this phone, else "storage:org-assets/<path>". */
+data class Organisation(val id: String, val name: String, val plan: Plan = Plan.FREE, val logoRef: String? = null)
 
 enum class OrgRole { OWNER, ADMIN, MEMBER }
 
@@ -37,6 +38,8 @@ data class Project(
     val progressPct: Int = 0,
     val shiftHours: Double = 8.0,
     val attendanceRemarks: Boolean = true,
+    /** Cover photo: a local URI until uploaded on this phone, else "storage:project-media/<path>". */
+    val imageRef: String? = null,
 )
 
 data class NewProject(
@@ -44,6 +47,8 @@ data class NewProject(
     val address: String? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    /** A local photo URI for the site's card. */
+    val imageUri: String? = null,
 )
 
 enum class TaskStatus { NOT_STARTED, IN_PROGRESS, BLOCKED, COMPLETED }

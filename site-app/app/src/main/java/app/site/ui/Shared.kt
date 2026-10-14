@@ -20,6 +20,7 @@ import app.site.R
 import app.site.design.SiteTheme
 import app.site.design.Size
 import app.site.design.Space
+import kotlinx.coroutines.launch
 import app.site.design.components.SiteIcon
 import coil.request.ImageRequest
 
@@ -62,5 +63,24 @@ fun SyncBanner() {
     ) {
         SiteIcon(icon, null, tint = c.text, size = 16.dp)
         Text(text, style = SiteTheme.type.xs, color = c.text)
+    }
+}
+
+/**
+ * Picks one image from the phone and copies it into app storage (picked URIs can lose permission before the
+ * upload runs). Call the returned function to open the picker.
+ */
+@Composable
+fun rememberImagePicker(onPicked: (String) -> Unit): () -> Unit {
+    val container = LocalContainer.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) scope.launch { container.photos.importPicked(uri)?.let { onPicked(it.toString()) } }
+    }
+    return {
+        launcher.launch(androidx.activity.result.PickVisualMediaRequest(
+            androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
 }

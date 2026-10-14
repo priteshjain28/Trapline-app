@@ -120,7 +120,11 @@ fun ProjectCard(p: Project, today: LocalDate, onClick: () -> Unit) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.s3)) {
                 Box(Modifier.size(56.dp).clip(Radius.md).background(c.accentTint), contentAlignment = Alignment.Center) {
-                    SiteIcon(R.drawable.ic_building_2, null, tint = c.accent)
+                    val image = p.imageRef
+                    if (image != null) {
+                        coil.compose.AsyncImage(model = app.site.ui.photoModel(image), contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    } else SiteIcon(R.drawable.ic_building_2, null, tint = c.accent)
                 }
                 Text(p.name, Modifier.weight(1f), style = SiteTheme.type.base.copy(fontWeight = FontWeight.W600), color = c.text,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)

@@ -193,30 +193,81 @@ class SyncedBackend(
 
     /** Who the user is and which organisation they're in, from the server; cached for offline launches. */
     private suspend fun loadSession(userId: String): Session {
-        val profile = api.select("profiles", mapOf("select" to "id,name,phone", "id" to "eq.$userId")).firstOrNull()?.jsonObject
+        val profile = api.select("profiles", mapOf("select" to "id,name,phone,email", "id" to "eq.$userId")).firstOrNull()?.jsonObject
         val membership = api.select("org_members", mapOf(
-            "select" to "role,organisations(id,name,plan)", "user_id" to "eq.$userId", "order" to "created_at.asc", "limit" to "1",
+            "select" to "role,organisations(id,name,plan,logo_path)", "user_id" to "eq.$userId", "order" to "created_at.asc", "limit" to "1",
         )).firstOrNull()?.jsonObject
-        val user = User(userId, profile?.strOrNull("name").orEmpty(), profile?.strOrNull("phone").orEmpty())
+        val user = User(userId, profile?.strOrNull("name").orEmpty(), profile?.strOrNull("phone").orEmpty(), profile?.strOrNull("email"))
         val orgJson = membership?.get("organisations")?.jsonObject
-        val org = orgJson?.let { Organisation(it.str("id"), it.str("name"), planOf(it.strOrNull("plan"))) }
+        // a logo picked on this phone keeps showing from the phone's own copy
+        val localLogo = q.kvGet("org_logo_local").executeAsOneOrNull()
+        val org = orgJson?.let {
+            Organisation(it.str("id"), it.str("name"), planOf(it.strOrNull("plan")),
+                localLogo ?: it.strOrNull("logo_path")?.let { p -> "storage:org-assets/$p" })
+        }
         val role = membership?.strOrNull("role")?.let { r -> OrgRole.entries.firstOrNull { it.name.equals(r, true) } }
         val s = Session(user, org, role)
-        q.kvPut("session", buildJsonObject {
-            put("user_id", user.id); put("name", user.name); put("phone", user.phone)
-            putOrNull("org_id", org?.id); putOrNull("org_name", org?.name); putOrNull("org_plan", org?.plan?.name); putOrNull("org_role", role?.name)
-        }.toString())
-        q.upsertPerson(PersonRow(user.id, user.name, user.phone))
-        _session.value = s
+        q.upsertPerson(PersonRow(user.id, user.name, user.phone, user.email))
+        saveSession(s)
         return s
+    }
+
+    /** Remembers the session for offline launches and tells the screens. */
+    private fun saveSession(s: Session) {
+        q.kvPut("session", buildJsonObject {
+            put("user_id", s.user.id); put("name", s.user.name); put("phone", s.user.phone); putOrNull("email", s.user.email)
+            putOrNull("org_id", s.org?.id); putOrNull("org_name", s.org?.name); putOrNull("org_plan", s.org?.plan?.name)
+            putOrNull("org_logo", s.org?.logoRef); putOrNull("org_role", s.orgRole?.name)
+        }.toString())
+        _session.value = s
     }
 
     private fun loadCachedSession(): Session? {
         if (tokens.load() == null) return null
         val o = q.kvGet("session").executeAsOneOrNull()?.let { kotlinx.serialization.json.Json.parseToJsonElement(it).jsonObject } ?: return null
-        val org = o.strOrNull("org_id")?.let { Organisation(it, o.strOrNull("org_name").orEmpty(), planOf(o.strOrNull("org_plan"))) }
-        return Session(User(o.str("user_id"), o.strOrNull("name").orEmpty(), o.strOrNull("phone").orEmpty()), org,
+        val org = o.strOrNull("org_id")?.let { Organisation(it, o.strOrNull("org_name").orEmpty(), planOf(o.strOrNull("org_plan")), o.strOrNull("org_logo")) }
+        return Session(User(o.str("user_id"), o.strOrNull("name").orEmpty(), o.strOrNull("phone").orEmpty(), o.strOrNull("email")), org,
             o.strOrNull("org_role")?.let { r -> OrgRole.entries.firstOrNull { it.name == r } })
+    }
+
+    override suspend fun updateProfile(name: String, email: String?): Result<Session> = call {
+        val current = _session.value ?: throw AppError.NotAllowed
+        if (name.isBlank()) throw AppError.Invalid("name", AppError.Reason.REQUIRED)
+        val e = Validate.email(email).getOrThrow()
+        val user = current.user.copy(name = name.trim(), email = e)
+        db.transaction {
+            q.upsertPerson(PersonRow(user.id, user.name, user.phone, user.email))
+            engine.enqueueUpdate("profiles", user.id, mapOf("id" to "eq.${user.id}"), buildJsonObject {
+                put("name", user.name); putOrNull("email", user.email)
+            })
+        }
+        val next = current.copy(user = user)
+        saveSession(next)
+        syncNow()
+        next
+    }
+
+    override suspend fun updateOrganisation(name: String, logoUri: String?): Result<Session> = call {
+        val current = _session.value ?: throw AppError.NotAllowed
+        val org = current.org ?: throw AppError.NotAllowed
+        if (current.orgRole != OrgRole.OWNER && current.orgRole != OrgRole.ADMIN) throw AppError.NotAllowed
+        val n = name.trim()
+        if (n.isEmpty()) throw AppError.Invalid("name", AppError.Reason.REQUIRED)
+        if (n.length > Validate.NAME_MAX) throw AppError.Invalid("name", AppError.Reason.TOO_LONG)
+        val path = logoUri?.let { "${org.id}/logo-${newId()}.jpg" }
+        db.transaction {
+            if (logoUri != null && path != null) {
+                q.kvPut("org_logo_local", logoUri)
+                engine.enqueueUpload(org.id, "org-assets", path, logoUri, "image/jpeg")
+            }
+            engine.enqueueUpdate("organisations", org.id, mapOf("id" to "eq.${org.id}"), buildJsonObject {
+                put("name", n); if (path != null) put("logo_path", path)
+            })
+        }
+        val next = current.copy(org = org.copy(name = n, logoRef = logoUri ?: org.logoRef))
+        saveSession(next)
+        syncNow()
+        next
     }
 
     private fun planOf(s: String?): Plan = Plan.entries.firstOrNull { it.name.equals(s, true) } ?: Plan.FREE
@@ -224,7 +275,7 @@ class SyncedBackend(
     // ================================================================ people
 
     override fun people(): Flow<Map<String, User>> =
-        q.people().asFlow().mapToList(io).map { rows -> rows.associate { it.id to User(it.id, it.name, it.phone.orEmpty()) } }
+        q.people().asFlow().mapToList(io).map { rows -> rows.associate { it.id to User(it.id, it.name, it.phone.orEmpty(), it.email) } }
 
     private fun personName(id: String?): String = id?.let { q.person(it).executeAsOneOrNull()?.name }.orEmpty()
 
@@ -240,16 +291,36 @@ class SyncedBackend(
         // the server enforces the plan too; checking here avoids a project that appears and then vanishes
         val active = q.projects().executeAsList().count { it.org_id == org.id && it.status != "archived" }
         if (org.plan == Plan.FREE && active >= FREE_PROJECTS) throw AppError.PlanLimit("projects")
-        val row = ProjectRow(newId(), org.id, v.name, "active", v.address, v.startDate?.toString(), v.endDate?.toString(), 0.0, 8.0, 1)
+        val id = newId()
+        val imagePath = v.imageUri?.let { "$id/cover-${newId()}.jpg" }
+        val row = ProjectRow(id, org.id, v.name, "active", v.address, v.startDate?.toString(), v.endDate?.toString(), 0.0, 8.0, 1,
+            imagePath, v.imageUri)
         db.transaction {
             q.upsertProject(row)
             engine.enqueueUpsert("projects", row.id, buildJsonObject {
                 put("id", row.id); put("org_id", row.org_id); put("name", row.name); putOrNull("address", row.address)
                 putOrNull("start_date", row.start_date); putOrNull("end_date", row.end_date); put("created_by", s.user.id)
             })
+            // the project first (storage checks it exists), then the photo, then the row pointing at it
+            if (v.imageUri != null && imagePath != null) enqueueCover(row.id, imagePath, v.imageUri)
         }
         syncNow()
         project(row)
+    }
+
+    override suspend fun setImage(projectId: String, uri: String): Result<Unit> = call {
+        q.project(projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val path = "$projectId/cover-${newId()}.jpg"
+        db.transaction {
+            q.setProjectImage(path, uri, projectId)
+            enqueueCover(projectId, path, uri)
+        }
+        syncNow()
+    }
+
+    private fun enqueueCover(projectId: String, path: String, uri: String) {
+        engine.enqueueUpload(projectId, "project-media", path, uri, "image/jpeg")
+        engine.enqueueUpdate("projects", projectId, mapOf("id" to "eq.$projectId"), buildJsonObject { put("image_path", path) })
     }
 
     override suspend fun updateSettings(projectId: String, shiftHours: Double, attendanceRemarks: Boolean): Result<Unit> = call {
@@ -267,6 +338,7 @@ class SyncedBackend(
         r.id, r.org_id, r.name, ProjectStatus.entries.firstOrNull { it.name.equals(r.status, true) } ?: ProjectStatus.ACTIVE,
         r.address, r.start_date?.let(LocalDate::parse), r.end_date?.let(LocalDate::parse), r.progress_pct.toInt(), r.shift_hours,
         r.attendance_remarks != 0L,
+        r.image_local ?: r.image_path?.let { "storage:project-media/$it" },
     )
 
     // ================================================================ tasks
@@ -783,13 +855,16 @@ class SyncedBackend(
     // ================================================================ pulling: server rows -> local rows
 
     private fun pullSpecs(): List<SyncEngine.PullSpec> = listOf(
-        SyncEngine.PullSpec("profiles", "id,name,phone,updated_at", { o ->
-            q.upsertPerson(PersonRow(o.str("id"), o.strOrNull("name").orEmpty(), o.strOrNull("phone")))
+        SyncEngine.PullSpec("profiles", "id,name,phone,email,updated_at", { o ->
+            q.upsertPerson(PersonRow(o.str("id"), o.strOrNull("name").orEmpty(), o.strOrNull("phone"), o.strOrNull("email")))
         }, { it.str("id") }),
-        SyncEngine.PullSpec("projects", "id,org_id,name,status,address,start_date,end_date,progress_pct,updated_at", { o ->
+        SyncEngine.PullSpec("projects", "id,org_id,name,status,address,start_date,end_date,progress_pct,image_path,updated_at", { o ->
             val old = q.project(o.str("id")).executeAsOneOrNull()
+            val path = o.strOrNull("image_path")
             q.upsertProject(ProjectRow(o.str("id"), o.str("org_id"), o.str("name"), o.str("status"), o.strOrNull("address"),
-                o.strOrNull("start_date"), o.strOrNull("end_date"), o.dbl("progress_pct"), old?.shift_hours ?: 8.0, old?.attendance_remarks ?: 1))
+                o.strOrNull("start_date"), o.strOrNull("end_date"), o.dbl("progress_pct"), old?.shift_hours ?: 8.0, old?.attendance_remarks ?: 1,
+                // keep this phone's own copy while the path is the one it uploaded
+                path, old?.image_local?.takeIf { old.image_path == path }))
         }, { it.str("id") }),
         SyncEngine.PullSpec("project_settings", "project_id,shift_hours,attendance_remarks,updated_at", { o ->
             q.updateSettings(o.dbl("shift_hours", 8.0), if (o.bool("attendance_remarks", true)) 1 else 0, o.str("project_id"))

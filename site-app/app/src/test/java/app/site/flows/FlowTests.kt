@@ -554,3 +554,32 @@ class TeamFlows : FlowTest() {
         assertTrue(shows("Owner"))
     }
 }
+
+/** S28/S29: your email, and the company's name. */
+class CompanyFlows : FlowTest() {
+    @Test fun c_H1_emailIsCheckedAndSaved() {
+        launch()
+        tap(action("Your profile"))
+        waitFor("Profile")
+        type("Email", "anita at example")
+        tap(button("Save"))
+        waitFor("That doesn't look like an email address")
+        field("Email").performTextClearance()
+        type("Email", "Anita@Example.com")
+        tap(button("Save"))
+        compose.waitUntil(5_000) { container.session.session.value?.user?.email == "anita@example.com" }
+    }
+
+    @Test fun c_H2_renameTheCompany() {
+        launch()
+        tap(action("Your profile"))
+        tap(button("Organisation"))
+        waitFor("Company name")
+        assertAccessible("S29 company")
+        field("Company name").performTextClearance()
+        type("Company name", "Sharma Builders")
+        tap(button("Save"))
+        waitFor("Saved.")
+        assertEquals("Sharma Builders", container.session.session.value?.org?.name)
+    }
+}

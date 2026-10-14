@@ -162,6 +162,29 @@ class FakeBackend(
         return Result.success(next)
     }
 
+    override suspend fun updateProfile(name: String, email: String?): Result<Session> {
+        io()
+        val current = _session.value ?: return Result.failure(AppError.NotAllowed)
+        if (name.isBlank()) return Result.failure(AppError.Invalid("name", AppError.Reason.REQUIRED))
+        val e = Validate.email(email).getOrElse { return Result.failure(it) }
+        val nu = current.user.copy(name = name.trim(), email = e)
+        state.update { it.copy(users = it.users + (nu.id to nu)) }
+        return Result.success(current.copy(user = nu).also { _session.value = it })
+    }
+
+    override suspend fun updateOrganisation(name: String, logoUri: String?): Result<Session> {
+        io()
+        val current = _session.value ?: return Result.failure(AppError.NotAllowed)
+        val org = current.org ?: return Result.failure(AppError.NotAllowed)
+        if (current.orgRole != OrgRole.OWNER && current.orgRole != OrgRole.ADMIN) return Result.failure(AppError.NotAllowed)
+        val n = name.trim()
+        if (n.isEmpty()) return Result.failure(AppError.Invalid("name", AppError.Reason.REQUIRED))
+        if (n.length > Validate.NAME_MAX) return Result.failure(AppError.Invalid("name", AppError.Reason.TOO_LONG))
+        val next = org.copy(name = n, logoRef = logoUri ?: org.logoRef)
+        state.update { it.copy(org = next) }
+        return Result.success(current.copy(org = next).also { _session.value = it })
+    }
+
     override suspend fun deleteAccount(): Result<Unit> {
         val u = _session.value?.user ?: return Result.failure(AppError.NotAllowed)
         state.update { it.copy(users = it.users - u.id) }
@@ -190,7 +213,7 @@ class FakeBackend(
         // same rule as the server's check_project_limit()
         val active = state.value.projects.values.count { it.orgId == org.id && it.status != app.site.core.model.ProjectStatus.ARCHIVED }
         if (org.plan == app.site.core.model.Plan.FREE && active >= FREE_PROJECTS) return Result.failure(AppError.PlanLimit("projects"))
-        val p = Project(newId(), org.id, v.name, address = v.address, startDate = v.startDate, endDate = v.endDate)
+        val p = Project(newId(), org.id, v.name, address = v.address, startDate = v.startDate, endDate = v.endDate, imageRef = v.imageUri)
         state.update { s -> s.copy(projects = s.projects + (p.id to p)) }
         event(p.id, ActivityVerb.CREATED_PROJECT, p.id, p.name)
         return Result.success(p)
@@ -203,6 +226,13 @@ class FakeBackend(
             val p = s.projects[projectId] ?: return@update s
             s.copy(projects = s.projects + (p.id to p.copy(shiftHours = shiftHours, attendanceRemarks = attendanceRemarks)))
         }
+        return Result.success(Unit)
+    }
+
+    override suspend fun setImage(projectId: String, uri: String): Result<Unit> {
+        io()
+        val p = state.value.projects[projectId] ?: return Result.failure(AppError.NotAllowed)
+        state.update { it.copy(projects = it.projects + (p.id to p.copy(imageRef = uri))) }
         return Result.success(Unit)
     }
 

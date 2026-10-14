@@ -23,6 +23,7 @@ fun errorRes(e: Throwable): Int = when (e) {
         AppError.Reason.NOT_ENOUGH_STOCK -> R.string.err_not_enough_stock
         AppError.Reason.IN_FUTURE -> R.string.err_in_future
         AppError.Reason.ALREADY_MEMBER -> R.string.err_already_member
+        AppError.Reason.BAD_EMAIL -> R.string.err_bad_email
     }
     is AppError.PlanLimit -> R.string.err_plan_limit_projects
     is AppError.OwnerMustTransfer -> R.string.err_owner_must_transfer

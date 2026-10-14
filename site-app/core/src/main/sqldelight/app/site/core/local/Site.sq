@@ -4,7 +4,8 @@
 CREATE TABLE person (
   id TEXT NOT NULL PRIMARY KEY,
   name TEXT NOT NULL,
-  phone TEXT
+  phone TEXT,
+  email TEXT
 );
 
 CREATE TABLE project (
@@ -17,7 +18,9 @@ CREATE TABLE project (
   end_date TEXT,
   progress_pct REAL NOT NULL DEFAULT 0,
   shift_hours REAL NOT NULL DEFAULT 8,
-  attendance_remarks INTEGER NOT NULL DEFAULT 1
+  attendance_remarks INTEGER NOT NULL DEFAULT 1,
+  image_path TEXT,
+  image_local TEXT
 );
 
 CREATE TABLE task (
@@ -257,6 +260,8 @@ project:
 SELECT * FROM project WHERE id = ?;
 projectIds:
 SELECT id FROM project;
+setProjectImage:
+UPDATE project SET image_path = ?, image_local = ? WHERE id = ?;
 updateSettings:
 UPDATE project SET shift_hours = ?, attendance_remarks = ? WHERE id = ?;
 updateProjectProgress:

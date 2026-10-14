@@ -51,6 +51,7 @@ object Routes {
     const val MATERIAL = "project/{pid}/stock/{mid}"
     const val GALLERY = "project/{pid}/gallery"
     const val TEAM = "project/{pid}/team"
+    const val COMPANY = "company"
     const val ALBUM = "project/{pid}/albums/{aid}"
 
     fun project(pid: String, tab: Int = 0) = "project/$pid?tab=$tab"
@@ -180,7 +181,8 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
         composable(Routes.ATTENDANCE_SETTINGS, listOf(pid)) { e ->
             AttendanceSettingsScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() })
         }
-        composable(Routes.PROFILE) { ProfileScreen(onBack = { nav.popBackStack() }) }
+        composable(Routes.PROFILE) { ProfileScreen(onBack = { nav.popBackStack() }, onCompany = { nav.navigate(Routes.COMPANY) }) }
+        composable(Routes.COMPANY) { app.site.ui.more.CompanyScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.PLANNED, listOf(navArgument("sid") { type = NavType.StringType })) { e ->
             PlannedScreen(Planned.byId(e.arguments?.getString("sid")), onBack = { nav.popBackStack() })
         }

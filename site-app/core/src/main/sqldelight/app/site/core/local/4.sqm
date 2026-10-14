@@ -1,0 +1,5 @@
+-- Version 4 -> 5: a site's cover photo and a person's email.
+
+ALTER TABLE project ADD COLUMN image_path TEXT;
+ALTER TABLE project ADD COLUMN image_local TEXT;
+ALTER TABLE person ADD COLUMN email TEXT;

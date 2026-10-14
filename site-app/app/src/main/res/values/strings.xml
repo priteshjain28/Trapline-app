@@ -414,4 +414,21 @@
     <string name="invite_saved">Invite saved. They join when they sign in with this number.</string>
     <string name="team_change_role">Change role</string>
     <string name="err_already_member">They\'re already on this site</string>
+
+    <!-- profile email, company (S29), site photo -->
+    <string name="field_email">Email</string>
+    <string name="field_email_placeholder">For invoices and reports (optional)</string>
+    <string name="err_bad_email">That doesn\'t look like an email address</string>
+    <string name="company_title">Company</string>
+    <string name="company_logo">Logo</string>
+    <string name="action_change_logo">Change logo</string>
+    <string name="action_add_logo">Add logo</string>
+    <string name="field_company_name">Company name</string>
+    <string name="company_admins_only">Only the owner or an admin can change company details.</string>
+    <string name="company_saved">Saved.</string>
+    <string name="action_add_site_photo">Add a site photo</string>
+    <string name="action_change_site_photo">Change photo</string>
+    <string name="field_site_photo">Site photo (optional)</string>
+    <string name="a11y_site_photo">Site photo</string>
+    <string name="a11y_company_logo">Company logo</string>
 </resources>

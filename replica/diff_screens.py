@@ -35,6 +35,7 @@ PAIRS = [
     ("S27", "S27-feed", "different data: reference has 1 post, clone has the seed feed"),
     ("S28", "S28-profile", ""),
     ("S30", "S30-gallery-media", ""),
+    ("S29", "S29-organisation-edit", ""),
 ]
 
 

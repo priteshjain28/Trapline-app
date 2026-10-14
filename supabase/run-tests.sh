@@ -12,6 +12,7 @@ run -f tests/local_auth_stub.sql
 for m in migrations/*.sql; do run -f "$m"; done
 run -f tests/smoke.sql
 run -f tests/server_rules.sql
+run -f tests/org_assets.sql
 # seed goes into its own fresh database so it can't hide a test problem
 psql -q -v ON_ERROR_STOP=1 -d postgres -c "drop database $DB" >/dev/null
 psql -q -v ON_ERROR_STOP=1 -d postgres -c "create database $DB" >/dev/null
