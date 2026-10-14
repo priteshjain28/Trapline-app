@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Placeholder until /replica-brand. Matches the graphite accent token. -->
+    <color name="ic_launcher_background">#FF334155</color>
+</resources>

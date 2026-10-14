@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate code from replica/design/tokens.json. Standard library only.
 
-    python3 replica/design/gen_tokens.py          # write tokens.css, tailwind.tokens.cjs, compose/*.kt
+    python3 replica/design/gen_tokens.py          # write tokens.css, tailwind.tokens.cjs, compose/*.kt (+ copy into site-app)
     python3 replica/design/gen_tokens.py --check  # also run the WCAG check on light AND dark palettes
 
 tokens.json is the only source of truth. replica-brand edits values there and reruns this.
@@ -247,9 +247,11 @@ def main():
         sys.exit("color and color-dark must have the same roles: %s" % (set(t["color"]) ^ set(t["color-dark"])))
     write(os.path.join(HERE, "tokens.css"), css(t))
     write(os.path.join(HERE, "tailwind.tokens.cjs"), tailwind(t))
-    os.makedirs(os.path.join(HERE, "compose"), exist_ok=True)
-    for name, text in compose(t).items():
-        write(os.path.join(HERE, "compose", name), text)
+    app_dir = os.path.join(ROOT, "site-app", "app", "src", "main", "java", "app", "site", "design")
+    for out_dir in (os.path.join(HERE, "compose"), app_dir):
+        os.makedirs(out_dir, exist_ok=True)
+        for name, text in compose(t).items():
+            write(os.path.join(out_dir, name), text)
     if "--check" in sys.argv and not check(t):
         sys.exit(1)
 
