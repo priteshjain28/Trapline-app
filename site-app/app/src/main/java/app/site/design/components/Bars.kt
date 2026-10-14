@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -52,7 +53,8 @@ fun AppBarOrg(orgName: String, plan: String, userName: String, onProfile: () -> 
             Text(plan, style = SiteTheme.type.xs, color = c.onHeaderMuted, maxLines = 1)
         }
         SiteIconButton(R.drawable.ic_message_circle, stringResource(R.string.a11y_messages), onMessages, tint = c.onHeader)
-        Box(Modifier.clickable(role = Role.Button, onClickLabel = stringResource(R.string.a11y_your_profile), onClick = onProfile)) {
+        Box(Modifier.size(Size.touchMin).clickable(role = Role.Button, onClickLabel = stringResource(R.string.a11y_your_profile), onClick = onProfile),
+            contentAlignment = Alignment.Center) {
             Avatar(userName.ifBlank { "?" }, size = Size.avatarSm)
         }
     }
@@ -69,8 +71,10 @@ fun AppBarProject(orgName: String, projectName: String, onClose: () -> Unit, onS
         ) {
             SiteIconButton(R.drawable.ic_x, stringResource(R.string.a11y_close_project), onClose)
             Column(
-                Modifier.weight(1f).clickable(role = Role.Button, onClickLabel = stringResource(R.string.a11y_switch_project), onClick = onSwitch)
+                Modifier.weight(1f).heightIn(min = Size.touchMin)
+                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.a11y_switch_project), onClick = onSwitch)
                     .padding(vertical = Space.s1),
+                verticalArrangement = Arrangement.Center,
             ) {
                 Text(orgName, style = SiteTheme.type.xs, color = c.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -141,8 +145,9 @@ fun Tabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier:
             labels.forEachIndexed { i, label ->
                 val on = i == selected
                 Column(
-                    Modifier.selectable(on, onClick = { onSelect(i) }, role = Role.Tab).padding(horizontal = Space.s3),
+                    Modifier.heightIn(min = Size.touchMin).selectable(on, onClick = { onSelect(i) }, role = Role.Tab).padding(horizontal = Space.s3),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(label, Modifier.padding(vertical = Space.s3), style = SiteTheme.type.sm.copy(fontWeight = FontWeight.W600),
                         color = if (on) c.accent else c.textMuted, maxLines = 1)

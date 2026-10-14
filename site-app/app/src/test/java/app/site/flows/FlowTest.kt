@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -71,7 +72,7 @@ abstract class FlowTest {
     fun tab(label: String): SemanticsNodeInteraction =
         compose.onNode(hasText(label) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
     fun button(label: String): SemanticsNodeInteraction =
-        compose.onNode(hasText(label) and hasClickAction())
+        compose.onNode((hasText(label) or hasContentDescription(label)) and hasClickAction())
     /** A filter chip or checkbox row, by its label. */
     fun chip(label: String): SemanticsNodeInteraction =
         compose.onNode(hasText(label) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Checkbox))

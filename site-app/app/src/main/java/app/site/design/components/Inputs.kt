@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -210,13 +211,13 @@ fun DateStepper(date: LocalDate, onChange: (LocalDate) -> Unit, max: LocalDate, 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SiteIconButton(R.drawable.ic_chevron_left, stringResource(R.string.a11y_previous_day), { onChange(date.minusDays(1)) })
-        Text(
-            Format.day(date),
-            Modifier.weight(1f).clickable(role = Role.Button) { open = true },
-            style = SiteTheme.type.base.copy(fontWeight = FontWeight.W600),
-            color = c.text,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
+        androidx.compose.foundation.layout.Box(
+            Modifier.weight(1f).heightIn(min = Size.touchMin).clickable(role = Role.Button) { open = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(Format.day(date), style = SiteTheme.type.base.copy(fontWeight = FontWeight.W600), color = c.text,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        }
         SiteIconButton(R.drawable.ic_chevron_right, stringResource(R.string.a11y_next_day), { onChange(date.plusDays(1)) },
             enabled = date.isBefore(max))
     }

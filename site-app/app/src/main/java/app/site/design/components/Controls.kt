@@ -85,16 +85,32 @@ fun SecondaryButton(
     small: Boolean = false,
 ) {
     val c = SiteTheme.colors
+    if (small) {
+        // looks 36dp tall, but the tappable area is the full 48dp
+        Box(
+            modifier.heightIn(min = Size.touchMin).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier.height(Size.buttonSm).clip(Radius.md).background(c.surfaceRaised).border(1.dp, c.borderInput, Radius.md)
+                    .padding(horizontal = Space.s3),
+                contentAlignment = Alignment.Center,
+            ) {
+                ButtonContent(text, icon, false, if (enabled) c.text else c.text.copy(alpha = 0.38f), small = true)
+            }
+        }
+        return
+    }
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(if (small) Size.buttonSm else Size.buttonMd),
+        modifier = modifier.height(Size.buttonMd),
         shape = Radius.md,
-        contentPadding = PaddingValues(horizontal = if (small) Space.s3 else Space.s4),
+        contentPadding = PaddingValues(horizontal = Space.s4),
         border = BorderStroke(1.dp, c.borderInput),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = c.surfaceRaised, contentColor = c.text),
     ) {
-        ButtonContent(text, icon, false, c.text, small)
+        ButtonContent(text, icon, false, c.text)
     }
 }
 
@@ -125,7 +141,8 @@ fun SiteFab(text: String, @DrawableRes icon: Int, onClick: () -> Unit, modifier:
         icon = { SiteIcon(icon, null, tint = c.onAccent) },
         onClick = onClick,
         expanded = expanded,
-        modifier = modifier,
+        // the label alone isn't announced, so screen readers heard an unnamed button
+        modifier = modifier.semantics { contentDescription = text },
         shape = Radius.lg,
         containerColor = c.accent,
         contentColor = c.onAccent,
