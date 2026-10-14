@@ -171,7 +171,7 @@ Expected: 140 bag on site (the field asks how much is on site now)
 Actual: 275 bag on site; the history shows a second "Opening stock +140"
 Evidence: `MaterialFlows.m_E3_addingWhatsAlreadyOnSiteSetsTheCount` failed in Site app run 25 (timed out waiting for "140 bag on site")
 Suspected cause: the screen always recorded an opening entry, even when the catalogue returned a material this site already holds
-Status: fixed in FIXCOMMIT (a material already on site is recorded as a count, which corrects the stock to the number entered; the form says so before saving)
+Status: fixed in d8c77a5 (a material already on site is recorded as a count, which corrects the stock to the number entered; the form says so before saving)
 
 ### BUG-010: a plain member can put wages in a report although the Wages tab hides them
 
@@ -189,5 +189,5 @@ Expected: no Wages part (as there is no Payments part)
 Actual: Wages is offered; ticked, the PDF lists each worker's wages
 Evidence: `MoneyFlows.p_N2_memberSeesNoMoney` failed in Site app run 25 ("no wages part")
 Suspected cause: only the Payments part checked `canSeeMoney`
-Status: fixed in FIXCOMMIT (Wages part shown only to people who see money; the report service also drops wages and payments for anyone else)
+Status: fixed in d8c77a5 (Wages part shown only to people who see money; the report service also drops wages and payments for anyone else)
 
