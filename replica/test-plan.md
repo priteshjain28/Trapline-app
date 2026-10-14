@@ -101,11 +101,72 @@ phone and your Supabase project.
 | F08-E1 | edge: events in the future | seed events | none dated after now | core `seedFeedIsNeverInTheFuture` || pass |
 | F08-N1 | negative: forged feed event | client inserts into activity_events | refused | db `smoke` || pass |
 
-## F03, F05, F06, F09 (partly built)
+## Second round (2026-10-14): the screens built since
 
-F03 material, F05 payables recording, F06 expenses and F09 gallery/albums have server tables and access rules (tested in
-db `smoke`: stock ledger, transfers, payables, expenses) but **no screens yet**. Their UI cases are written when the
-screens are built.
+Case ids in this round follow the test names (M material, G photos, T team, C company, I issues, P payables and
+expenses, CAM camera); the heading gives the recon flow. The first round's F04 (attendance) and F07 (tasks) predate the
+recon numbering: they are recon F05 and part of F01.
+
+### F03 / F04 Material: delivery to stock, issue to a task
+
+| case | type | steps | expected | auto | result |
+| --- | --- | --- | --- | --- | --- |
+| M-H1 | happy | Material tab → TMT bar | stock per material; history shows delivery #2 | ui `m_H1` | pass |
+| M-H2 | happy | Add material → Binding wire, kg, 25 | "25 kg on site" | ui `m_H2` | pass |
+| M-H3 | happy | Buying → Received → Record delivery → Cement 50, challan | delivery #3; cement 135 → 185 | ui `m_H3` | pass |
+| M-H4 | happy | Issued → Issue material → task #2, cement 35 | issue #3 for #2; cement 135 → 100 | ui `m_H4` | pass |
+| M-E1 | edge: issue more than in stock | 500 bags | "more than the site holds", disabled | ui `m_E1`, core `Stock` | pass |
+| M-E2 | edge: physical count | Update → Counted 130 | 130 on site; history "Count corrected −5" | ui `m_E2` | pass |
+| M-E3 | edge: add something already on site | Add material → pick Cement · OPC 53 → 140 | 140 on site (a count), not 275 | ui `m_E3` | **failed → BUG-009** |
+| M-E4 | edge: Hindi and emoji | "सरिया 8mm ✅", kg, 40 | listed as typed | ui `m_E4` | see results |
+| M-E5 | edge: offline, two phones | add material and deliveries offline on two phones | same material id, stock adds up | core `materialMovesAcrossPhones` | pass |
+| M-E6 | edge: delivery dated tomorrow | receive with a future date | refused (IN_FUTURE) | core `MaterialTest.refusals` | pass |
+| M-N1 | negative: empty delivery | no material, then qty 0 | Save disabled, "above zero" | ui `m_N1` | pass |
+
+### F05 / F06 Payables and expenses
+
+| case | type | steps | expected | auto | result |
+| --- | --- | --- | --- | --- | --- |
+| P-H1 | happy | Attendance → Wages → Record as payable → Pay | 5 payables; period then covered; one paid | ui `p_H1`, core `MoneyTest` | pass |
+| P-H2 | happy | More → Expenses → Add spend ₹750 → pay crane | total ₹19,250 → ₹20,000; crane paid | ui `p_H2` | pass |
+| P-E1 | edge: record twice | Record as payable again | nothing doubles; button off | ui `p_H1`, core | pass |
+| P-N1 | negative: overpay | ₹9,000 on ₹8,000 due | "more than what's still due" | ui `p_N1`, core | pass |
+| P-N2 | negative: permission | plain member opens Wages, Report | money hidden; no Wages or Payments part in the report | ui `p_N2` | **failed → BUG-010** |
+| P-N3 | negative: zero spend | amount 0 | Save disabled | ui `p_N3` | see results |
+| P-N4 | negative: second user's money | outsider / supervisor reads payables | nothing (RLS `can_see_money`) | db `smoke` ("B cannot see money"), core `moneyIsHiddenFromSiteStaff` | pass |
+
+### F07 Issues
+
+| case | type | steps | expected | auto | result |
+| --- | --- | --- | --- | --- | --- |
+| I-H1 | happy | More → Issues; Closed; All | counts and lists per status | ui `i_H1` | pass |
+| I-H2 | happy | Raise issue on task #2 for Ravi → comment → Mark fixed | issue #3, comment shown, Reopen offered | ui `i_H2` | pass |
+| I-E1 | edge: reopen | Closed → #2 → Reopen → back | Open (2) | ui `i_E1` | see results |
+| I-E2 | edge: Hindi + emoji comment, empty comment | | Send off when empty; text shown as typed | ui `i_E2` | see results |
+| I-E3 | edge: offline raise | raise and comment with no network, then sync | saved on the phone; numbered by the server | core `issuesAndCommentsSync` | pass |
+| I-N1 | negative: no title | | Raise disabled | ui `i_N1` | pass |
+
+### F09 Photos
+
+| case | type | steps | expected | auto | result |
+| --- | --- | --- | --- | --- | --- |
+| G-H1 | happy | More → Photos → Albums → New album | album opens, empty | ui `g_H1` | pass |
+| G-H2 | happy | photo → viewer → Move to album | album shows 1 photo | ui `g_H2` | pass |
+| G-N1 | negative: blank album name | spaces only | Create disabled | ui `g_N1` | see results |
+| CAM-N1 | negative: no camera permission | Take photo | asks, offers phone camera app, closes | ui `cam_N1` | pass |
+
+### F10 Team and company
+
+| case | type | steps | expected | auto | result |
+| --- | --- | --- | --- | --- | --- |
+| T-H1 | happy | More → Team | owner, engineer, supervisor with roles | ui `t_H1` | pass |
+| T-H2 | happy | Invite 98111 22222 as storekeeper | pending invite listed | ui `t_H2` | pass |
+| T-H3 | happy | Ravi → Manager → Remove | role changes; removed | ui `t_H3` | pass |
+| T-N1 | negative: already a member | invite Ravi's number | "already on this site" | ui `t_N1` | pass |
+| T-N2 | negative: not a mobile number | 12345 67890 | phone error | ui `t_N2` | see results |
+| T-N3 | negative: permission | plain member opens Team | explained; no Invite | ui `t_N3` | see results |
+| C-H1 | happy + negative | email "anita at example", then a good one | refused, then saved lower-case | ui `c_H1` | pass |
+| C-H2 | happy | rename the company | saved | ui `c_H2` | pass |
 
 ## Layout edges
 
@@ -118,6 +179,8 @@ screens are built.
 
 - [ ] SMS code arrives through MSG91 (DLT template approved) and signs in
 - [ ] Camera: Take photo → photo on the update → visible on a second phone after sync
+- [ ] In-app camera (S32): several shots in a row, flash, front lens; Done hands them to the update
+- [ ] Team invite on a real server: the invited phone signs in and sees only that site
 - [ ] Airplane mode: log work and attendance, reconnect, both reach the second phone
 - [ ] Report PDF opens in a PDF viewer and shares to WhatsApp with Hindi text intact
 - [ ] Razorpay test checkout (test UPI / card), webhook flips plan to Pro; cancel → back to Free at period end

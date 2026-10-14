@@ -9,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import app.site.core.model.OrgRole
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
@@ -473,6 +474,28 @@ class MaterialFlows : FlowTest() {
         assertTrue(shows("Enter a number above zero"))
         button("Save").assertIsNotEnabled()
     }
+
+    @Test fun m_E3_addingWhatsAlreadyOnSiteSetsTheCount() {
+        openMaterial()
+        tap(button("Add material"))
+        type("Material", "Cem")
+        tap(text("Cement · OPC 53 (bag)"))
+        type("How much is on site now", "140")
+        tap(button("Add material"))
+        waitFor("140 bag on site")
+        assertFalse("not added on top", shows("275 bag on site"))
+    }
+
+    @Test fun m_E4_hindiAndEmojiName() {
+        openMaterial()
+        tap(button("Add material"))
+        type("Material", "सरिया 8mm ✅")
+        tap(chip("kg"))
+        type("How much is on site now", "40")
+        tap(button("Add material"))
+        waitFor("40 kg on site")
+        assertTrue(shows("सरिया 8mm ✅", substring = true))
+    }
 }
 
 /** F09: site photos and albums. */
@@ -513,6 +536,15 @@ class GalleryFlows : FlowTest() {
         compose.waitForIdle()
         tap(tab("Albums"))
         waitFor("1 photo")
+    }
+
+    @Test fun g_N1_albumNeedsAName() {
+        openGallery()
+        tap(tab("Albums"))
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("New album") and androidx.compose.ui.test.hasClickAction())[0])
+        button("Create album").assertIsNotEnabled()
+        type("Album name", "   ")
+        button("Create album").assertIsNotEnabled()
     }
 }
 
@@ -570,6 +602,24 @@ class TeamFlows : FlowTest() {
         tap(action("Your profile"))
         waitFor("Profile")
         assertTrue(shows("Owner"))
+    }
+
+    @Test fun t_N2_notAMobileNumber() {
+        openTeam()
+        tap(button("Invite"))
+        type("Their mobile number", "12345 67890")
+        tap(button("Send invite"))
+        waitFor("Enter a 10-digit Indian mobile number")
+    }
+
+    @Test fun t_N3_memberCantManagePeople() {
+        launch(orgRole = OrgRole.MEMBER)
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Team"))
+        waitFor("Only the site manager or a company admin can add or change people.")
+        assertFalse("no invite button", shows("Invite"))
+        assertAccessible("S36 team, member")
     }
 }
 
@@ -647,6 +697,26 @@ class IssueFlows : FlowTest() {
         tap(button("Raise issue"))
         button("Raise issue").assertIsNotEnabled()
     }
+
+    @Test fun i_E1_reopenAClosedIssue() {
+        openIssues()
+        tap(tab("Closed (1)"))
+        tap(text("#2 Water tanker late two days running"))
+        tap(button("Reopen"))
+        waitFor("Mark fixed")
+        tap(named("Back"))
+        waitFor("Open (2)")
+    }
+
+    @Test fun i_E2_commentsInHindiAndNoEmptyOnes() {
+        openIssues()
+        tap(text("#1 Hairline cracks in plaster near the lift lobby"))
+        waitFor("Mark fixed")
+        button("Send").assertIsNotEnabled()
+        type("Add a comment", "दरार बढ़ रही है 😟")
+        tap(button("Send"))
+        waitFor("दरार बढ़ रही है 😟")
+    }
 }
 
 /** F05/F06: wages to payables, paying them, and what the site has cost. Seed: crane hire ₹18,000 with ₹10,000 paid. */
@@ -698,6 +768,34 @@ class MoneyFlows : FlowTest() {
         field("Amount").performTextClearance()
         type("Amount", "9000")
         assertTrue(shows("That's more than what's still due"))
+    }
+
+    @Test fun p_N2_memberSeesNoMoney() {
+        launch(orgRole = OrgRole.MEMBER)
+        tap(text("Green Park Tower B"))
+        tap(tab("Attendance"))
+        tap(tab("Wages"))
+        waitFor("Wages and spend are visible to the site manager and accountants.")
+        assertFalse(shows("Record as payable"))
+        tap(tab("Report"))
+        waitFor("Create report")
+        fun part(label: String) = compose.onAllNodes(androidx.compose.ui.test.hasText(label) and
+            androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role,
+                androidx.compose.ui.semantics.Role.Checkbox)).fetchSemanticsNodes().isNotEmpty()
+        assertTrue("other parts still there", part("Material"))
+        assertFalse("no wages part", part("Wages"))
+        assertFalse("no payments part", part("Payments"))
+    }
+
+    @Test fun p_N3_spendNeedsAnAmount() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Expenses"))
+        tap(button("Add spend"))
+        type("Amount", "0")
+        type("Notes", "Nothing")
+        button("Save").assertIsNotEnabled()
     }
 }
 

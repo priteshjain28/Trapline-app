@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import app.site.AppContainer
 import app.site.LocalContainer
+import app.site.core.data.fake.FakeBackend
+import app.site.core.model.OrgRole
 import app.site.design.SiteAppTheme
 import app.site.ui.SiteNavHost
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -50,11 +52,13 @@ abstract class FlowTest {
     val clock: Clock = Clock.fixed(Instant.parse("2026-10-13T04:00:00Z"), ZoneId.of("Asia/Kolkata"))
     lateinit var container: AppContainer
 
-    fun launch(signedIn: Boolean = true) {
+    /** [orgRole] other than owner signs Anita in as a plain member: no money, can't manage people. */
+    fun launch(signedIn: Boolean = true, orgRole: OrgRole = OrgRole.OWNER) {
         container = AppContainer(ApplicationProvider.getApplicationContext(), clock, latencyMs = 0, forceDemo = true)
         if (signedIn) runBlocking {
             container.session.verifyOtp("9876543210", "123456").getOrThrow()
             container.session.completeProfile("Anita Rao", null).getOrThrow()
+            if (orgRole != OrgRole.OWNER) (container.session as FakeBackend).demoSetRole(orgRole)
         }
         compose.setContent {
             CompositionLocalProvider(LocalContainer provides container) {
