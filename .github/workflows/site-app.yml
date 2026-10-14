@@ -1,0 +1,78 @@
+name: Site app
+
+on:
+  push:
+    paths:
+      - 'site-app/**'
+      - 'replica/design/**'
+      - '.github/workflows/site-app.yml'
+  pull_request:
+    paths:
+      - 'site-app/**'
+      - 'replica/design/**'
+      - '.github/workflows/site-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: site-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Core tests (models, data layer, wages, reports)
+        run: gradle :core:test --no-daemon --stacktrace
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Record screenshots
+        run: gradle :app:recordRoborazziDebug --no-daemon --stacktrace
+
+      - name: Upload APK, screenshots and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-app
+          path: |
+            site-app/app/build/outputs/apk/debug/*.apk
+            site-app/app/build/clone-screens/
+            site-app/app/build/reports/tests/
+            site-app/core/build/reports/tests/
+          if-no-files-found: ignore
+
+      # Screenshots go back into the branch for /replica-diff (never on main; pushes made with
+      # GITHUB_TOKEN don't start another run).
+      - name: Commit screenshots to replica/clone-screens
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        working-directory: .
+        run: |
+          mkdir -p replica/clone-screens
+          cp site-app/app/build/clone-screens/*.png replica/clone-screens/
+          git add replica/clone-screens
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update clone screenshots"
+            git push
+          fi
