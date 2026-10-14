@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site app primitives</title>
+<style>
+{{css}}
+* { box-sizing: border-box; }
+body { margin: 0; background: #c9ced5; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+.cols { display: flex; gap: 24px; padding: 24px; align-items: flex-start; }
+.phone { width: 400px; background: var(--color-bg); color: var(--color-text); border-radius: 16px; overflow: hidden; }
+.phone > h2 { margin: 0; padding: 12px var(--size-gutter); font: 600 var(--text-xs)/var(--leading-xs) var(--font-mono);
+  color: var(--color-text-muted); background: var(--color-surface-track); text-transform: uppercase; letter-spacing: .06em; }
+.sec { padding: 16px var(--size-gutter); border-bottom: 8px solid var(--color-surface); }
+.sec > h3 { margin: 0 0 12px; font: 600 var(--text-xs)/var(--leading-xs) var(--font-sans); color: var(--color-text-muted); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.i { width: 24px; height: 24px; flex: none; }
+.i.sm { width: 20px; height: 20px; }
+/* type */
+.t-xs { font-size: var(--text-xs); line-height: var(--leading-xs); font-weight: var(--weight-xs); }
+.t-sm { font-size: var(--text-sm); line-height: var(--leading-sm); font-weight: var(--weight-sm); }
+.t-base { font-size: var(--text-base); line-height: var(--leading-base); font-weight: var(--weight-base); }
+.t-lg { font-size: var(--text-lg); line-height: var(--leading-lg); font-weight: var(--weight-lg); }
+.t-xl { font-size: var(--text-xl); line-height: var(--leading-xl); font-weight: var(--weight-xl); }
+.t-display { font-size: var(--text-display); line-height: var(--leading-display); font-weight: var(--weight-display); }
+.w6 { font-weight: 600; } .muted { color: var(--color-text-muted); } .subtle { color: var(--color-text-subtle); }
+.num { font-variant-numeric: tabular-nums; }
+/* swatches */
+.sw { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sw div { height: 44px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); font: 500 10px/1.2 var(--font-mono);
+  padding: 4px; display: flex; align-items: flex-end; }
+/* buttons */
+.btn { height: var(--size-button-md); padding: 0 16px; border-radius: var(--radius-md); border: 0; display: inline-flex; align-items: center;
+  gap: 8px; font: 600 var(--text-base)/1 var(--font-sans); cursor: pointer; }
+.btn.sm { height: var(--size-button-sm); font-size: var(--text-sm); padding: 0 12px; }
+.btn.lg { height: var(--size-button-lg); width: 100%; justify-content: center; }
+.btn.primary { background: var(--color-accent); color: var(--color-on-accent); }
+.btn.primary.pressed { background: var(--color-accent-hover); }
+.btn.secondary { background: var(--color-surface-raised); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-border-input); }
+.btn.tint { background: var(--color-accent-tint); color: var(--color-on-accent-tint); }
+.btn.text { background: none; color: var(--color-accent); padding: 0 8px; }
+.btn.danger { background: var(--color-danger); color: var(--color-on-accent); }
+.btn.focus { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.btn[disabled] { opacity: .38; }
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; }
+.fab { height: var(--size-fab); padding: 0 20px; border-radius: var(--radius-lg); background: var(--color-accent); color: var(--color-on-accent);
+  display: inline-flex; align-items: center; gap: 8px; font: 600 var(--text-base)/1 var(--font-sans); box-shadow: var(--shadow-pop); }
+.fab.icon { width: var(--size-fab); padding: 0; justify-content: center; }
+/* inputs */
+.field label { display: block; font: 600 var(--text-sm)/var(--leading-sm) var(--font-sans); color: var(--color-text-muted); margin-bottom: 4px; }
+.field label .req { color: var(--color-danger); }
+.input { height: var(--size-control); border-radius: var(--radius-md); border: 1px solid var(--color-border-input); background: var(--color-bg);
+  display: flex; align-items: center; gap: 8px; padding: 0 12px; font: var(--weight-base) var(--text-base)/1 var(--font-sans); color: var(--color-text); }
+.input.focus { border: 2px solid var(--color-focus); padding: 0 11px; }
+.input.error { border: 2px solid var(--color-danger); padding: 0 11px; }
+.input.disabled { background: var(--color-surface); color: var(--color-text-muted); border-color: var(--color-border); }
+.input .ph { color: var(--color-text-subtle); }
+.help { font: 500 var(--text-xs)/var(--leading-xs) var(--font-sans); color: var(--color-text-muted); margin-top: 4px; display: flex; gap: 4px; align-items: center; }
+.help.err { color: var(--color-danger); }
+.stepper { display: flex; align-items: center; justify-content: space-between; height: 48px; border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-md); padding: 0 4px; font: 600 var(--text-base)/1 var(--font-sans); }
+.stepper .dis { opacity: .38; }
+/* choice + checks */
+.card { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px 16px; background: var(--color-surface-raised); }
+.card.sel { background: var(--color-accent-tint); box-shadow: inset 0 0 0 2px var(--color-accent); border-color: transparent; }
+.cb { width: 20px; height: 20px; border-radius: var(--radius-sm); border: 2px solid var(--color-border-input); flex: none; display: grid; place-items: center; }
+.cb.on { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); }
+.cb.ind { background: var(--color-accent); border-color: var(--color-accent); }
+.cb.ind::after { content: ""; width: 10px; height: 2px; background: var(--color-on-accent); }
+.cb.locked { opacity: .5; }
+.tree { display: flex; flex-direction: column; gap: 10px; }
+.tree .kids { margin-left: 10px; padding-left: 22px; border-left: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 8px; }
+.ck { display: flex; gap: 12px; align-items: flex-start; }
+.switch { width: 52px; height: 32px; border-radius: 16px; background: var(--color-accent); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--color-on-accent); }
+.switch.off { background: var(--color-surface-track); box-shadow: inset 0 0 0 2px var(--color-border-input); }
+.switch.off::after { left: 6px; right: auto; top: 6px; width: 20px; height: 20px; background: var(--color-border-input); }
+.chipv { background: var(--color-accent-tint); color: var(--color-on-accent-tint); border-radius: var(--radius-pill); padding: 4px 12px; font: 600 var(--text-sm)/var(--leading-sm) var(--font-sans); }
+.chip { height: 32px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border-input); display: inline-flex; align-items: center; gap: 4px;
+  font: 600 var(--text-xs)/1 var(--font-sans); color: var(--color-text); }
+.chip.on { background: var(--color-accent-tint); border-color: var(--color-accent); color: var(--color-on-accent-tint); }
+/* nav */
+.tabs { display: flex; border-bottom: 1px solid var(--color-border); gap: 4px; }
+.tab { padding: 14px 12px 11px; font: 600 var(--text-sm)/var(--leading-sm) var(--font-sans); color: var(--color-text-muted); border-bottom: 3px solid transparent; }
+.tab.on { color: var(--color-accent); border-color: var(--color-accent); }
+.seg { display: flex; background: var(--color-surface-track); border-radius: var(--radius-md); padding: 4px; }
+.seg div { flex: 1; text-align: center; height: 32px; display: grid; place-items: center; border-radius: 6px; font: 600 var(--text-base)/1 var(--font-sans); color: var(--color-text-muted); }
+.seg .on { background: var(--color-surface-raised); color: var(--color-text); box-shadow: 0 0 0 1px var(--color-border); }
+.bnav { display: flex; border-top: 1px solid var(--color-border); height: var(--size-bottom-nav); background: var(--color-bg); }
+.bnav div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font: 500 var(--text-xs)/var(--leading-xs) var(--font-sans); color: var(--color-text-muted); }
+.bnav .on { color: var(--color-accent); }
+.bnav .pill { width: 56px; height: 28px; border-radius: 14px; display: grid; place-items: center; }
+.bnav .on .pill { background: var(--color-accent-tint); }
+.appbar { height: var(--size-app-bar); display: flex; align-items: center; gap: 12px; padding: 0 var(--size-gutter); }
+.appbar.org { background: var(--color-header); color: var(--color-on-header); }
+.appbar .grow { flex: 1; min-width: 0; }
+.av { width: 32px; height: 32px; border-radius: var(--radius-md); display: grid; place-items: center; font: 600 var(--text-xs)/1 var(--font-sans); flex: none; }
+.av.round { border-radius: 50%; }
+.av.a1 { background: var(--color-accent-tint); color: var(--color-on-accent-tint); }
+.av.a2 { background: var(--color-warning-tint); color: var(--color-warning); }
+.av.lg { width: 40px; height: 40px; font-size: var(--text-sm); }
+/* display */
+.badge { display: inline-flex; padding: 2px 8px; border-radius: var(--radius-sm); font: 600 var(--text-xs)/var(--leading-xs) var(--font-sans); }
+.b-neutral { background: var(--color-surface-track); color: var(--color-text-muted); }
+.b-info { background: var(--color-info-tint); color: var(--color-info); }
+.b-success { background: var(--color-success-tint); color: var(--color-success); }
+.b-warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.b-danger { background: var(--color-danger-tint); color: var(--color-danger); }
+.ring { width: 20px; height: 20px; border-radius: 50%; background: conic-gradient(var(--color-accent) 0 32%, var(--color-surface-track) 0); position: relative; flex: none; }
+.ring::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--color-surface-raised); }
+.thumb { width: 56px; height: 56px; border-radius: var(--radius-md); background: var(--color-accent-tint); color: var(--color-accent); display: grid; place-items: center; flex: none; }
+.divider { height: 1px; background: var(--color-border); margin: 12px 0; }
+.lrow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--color-border); }
+.lrow:last-child { border-bottom: 0; }
+.toggle3 { display: flex; border: 1px solid var(--color-border-input); border-radius: var(--radius-md); overflow: hidden; }
+.toggle3 div { width: 40px; height: 36px; display: grid; place-items: center; font: 600 var(--text-sm)/1 var(--font-sans); color: var(--color-text-muted); }
+.toggle3 div + div { border-left: 1px solid var(--color-border-input); }
+.toggle3 .on { background: var(--color-success-tint); color: var(--color-success); }
+.syncb { color: var(--color-text-subtle); }
+.bar { display: flex; gap: 2px; height: 16px; }
+.bar div { border-radius: 2px; }
+.bar div:first-child { border-radius: var(--radius-sm) 2px 2px var(--radius-sm); }
+.bar div:last-child { border-radius: 2px var(--radius-sm) var(--radius-sm) 2px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile { background: var(--color-surface); border-radius: var(--radius-md); padding: 10px 12px 10px 16px; position: relative; overflow: hidden; }
+.tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
+.feed { background: var(--color-surface); padding: 12px; margin: -16px calc(-1 * var(--size-gutter)); }
+.fcard { background: var(--color-surface-raised); border-radius: var(--radius-md); padding: 12px; border: 1px solid var(--color-border); }
+.sysline { text-align: center; padding: 10px; font: var(--weight-sm) var(--text-sm)/var(--leading-sm) var(--font-sans); color: var(--color-text-muted); }
+.banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: var(--radius-md); font: var(--weight-sm) var(--text-sm)/var(--leading-sm) var(--font-sans); }
+.banner.info { background: var(--color-info-tint); color: var(--color-info); }
+.banner.warning { background: var(--color-warning-tint); color: var(--color-warning); }
+.empty { text-align: center; padding: 8px 8px 4px; }
+.empty .circ { width: 72px; height: 72px; border-radius: 50%; background: var(--color-accent-tint); color: var(--color-accent); display: grid; place-items: center; margin: 0 auto 12px; }
+.empty .circ.err { background: var(--color-danger-tint); color: var(--color-danger); }
+.empty .circ .i { width: 32px; height: 32px; }
+.offline { display: flex; gap: 8px; align-items: center; background: var(--color-surface-track); color: var(--color-text); padding: 6px 16px; font: 500 var(--text-xs)/var(--leading-xs) var(--font-sans); }
+.toast { display: flex; gap: 12px; align-items: center; min-height: 48px; border-radius: var(--radius-md); padding: 0 16px; font: 600 var(--text-sm)/1 var(--font-sans); }
+.toast.ok { background: var(--color-success-solid); color: var(--color-on-success-solid); }
+.toast.neutral { background: var(--color-text); color: var(--color-bg); }
+.toast.neutral b { margin-left: auto; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="cols">
+  {{phone:light}}
+  {{phone:dark}}
+</div>
+</body>
+</html>
+<!--PHONE-->
+<div class="phone" data-theme="{{theme}}">
+  <h2>{{theme}}</h2>
+
+  <div class="appbar org">
+    <div class="av a1">MO</div>
+    <div class="grow"><span class="t-base w6">My Organisation</span> <span class="t-xs" style="color:var(--color-on-header-muted)">Free</span></div>
+    {{icon:message-circle}}
+    <div class="av a2 round">PJ</div>
+  </div>
+  <div class="offline">{{icon:wifi-off:sm}} Offline – changes will upload when you're back online</div>
+  <div class="appbar" style="border-bottom:1px solid var(--color-border)">
+    {{icon:x}}
+    <div class="grow"><div class="t-xs muted">My Organisation</div><div class="t-base w6" style="display:flex;align-items:center;gap:4px">palak {{icon:chevrons-up-down:sm}}</div></div>
+    {{icon:message-circle}}
+    <span class="btn secondary sm">Help</span>
+  </div>
+
+  <div class="sec"><h3>Colour roles</h3>
+    <div class="sw">
+      <div style="background:var(--color-bg)">bg</div><div style="background:var(--color-surface)">surface</div>
+      <div style="background:var(--color-surface-track)">track</div><div style="background:var(--color-border)">border</div>
+      <div style="background:var(--color-accent);color:var(--color-on-accent)">accent</div><div style="background:var(--color-accent-tint);color:var(--color-on-accent-tint)">accent-tint</div>
+      <div style="background:var(--color-header);color:var(--color-on-header)">header</div><div style="background:var(--color-focus);color:#fff">focus</div>
+      <div style="background:var(--color-info-tint);color:var(--color-info)">info</div><div style="background:var(--color-success-tint);color:var(--color-success)">success</div>
+      <div style="background:var(--color-warning-tint);color:var(--color-warning)">warning</div><div style="background:var(--color-danger-tint);color:var(--color-danger)">danger</div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Type</h3>
+    <div class="t-xl num">₹1,19,999</div>
+    <div class="t-lg">Attendance settings</div>
+    <div class="t-base w6">Detailed report</div>
+    <div class="t-base">Cement, ACC · 5 bags in stock</div>
+    <div class="t-sm muted">Day-by-day log of work, labour and material.</div>
+    <div class="t-xs muted">2 h ago · Tasks</div>
+    <div class="t-base" lang="hi">आज की रिपोर्ट · ₹ 3,000 मज़दूरी</div>
+  </div>
+
+  <div class="sec"><h3>Buttons</h3>
+    <div class="stack">
+      <div class="row"><span class="btn primary">Save</span><span class="btn primary pressed">Pressed</span><span class="btn primary focus">Focus</span></div>
+      <div class="row"><span class="btn primary" disabled>Disabled</span><span class="btn primary"><span class="spin"></span>Saving</span><span class="btn danger">Delete</span></div>
+      <div class="row"><span class="btn secondary">Secondary</span><span class="btn tint">Tint</span><span class="btn text">Text</span><span class="btn secondary sm">Small</span></div>
+      <span class="btn primary lg">Create report</span>
+      <div class="row"><span class="fab">{{icon:plus}}Add worker</span><span class="fab icon">{{icon:cloud-upload}}</span></div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Inputs</h3>
+    <div class="stack">
+      <div class="field"><label>Project name <span class="req">*</span></label><div class="input"><span class="ph">e.g. Green Park Tower B</span></div></div>
+      <div class="field"><label>Quantity</label><div class="input focus">12<span class="subtle" style="margin-left:auto">bags</span></div></div>
+      <div class="field"><label>Amount</label><div class="input error">₹ 0</div><div class="help err">{{icon:circle-alert:sm}} Enter an amount above ₹0</div></div>
+      <div class="field"><label>Phone</label><div class="input disabled">+91 94•• ••••68</div><div class="help">Verified</div></div>
+      <div class="input">{{icon:search}}<span class="ph">Search tasks by number or name</span></div>
+      <div class="stepper">{{icon:chevron-left}}<span>Mon, 12 Oct 2026</span><span class="dis">{{icon:chevron-right}}</span></div>
+      <div class="row"><span class="chip on">{{icon:check:sm}}In progress</span><span class="chip">Delayed</span><span class="chip">Has open issues</span></div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Choices</h3>
+    <div class="stack">
+      <div class="card sel"><div class="t-base w6" style="color:var(--color-on-accent-tint)">Detailed report</div><div class="t-sm muted">Every day's work, labour and material, in order.</div></div>
+      <div class="card"><div class="t-base w6">Summary <span class="badge b-success">New</span></div><div class="t-sm muted">Totals for the period, short enough to share.</div></div>
+      <div class="tree">
+        <div class="ck"><span class="cb ind"></span><div><div class="t-base">Material</div><div class="t-sm muted">Received, used and in stock</div></div></div>
+        <div class="kids">
+          <div class="ck"><span class="cb on">{{icon:check:sm}}</span><span class="t-sm">Deliveries received</span></div>
+          <div class="ck"><span class="cb"></span><span class="t-sm">Purchase orders</span></div>
+        </div>
+        <div class="ck"><span class="cb on locked">{{icon:check:sm}}</span><div><div class="t-base">Attendance register</div><div class="t-sm muted">Always included with attendance</div></div></div>
+        <div class="ck"><span class="cb locked"></span><div><div class="t-base muted">Team</div><div class="t-sm muted">Add team members first</div></div></div>
+      </div>
+      <div class="ck" style="align-items:center"><div style="flex:1"><div class="t-base">Remarks on attendance</div><div class="t-sm muted">Add a note to each worker's day</div></div><span class="switch"></span></div>
+      <div class="ck" style="align-items:center"><div style="flex:1"><div class="t-base">Hourly attendance</div><div class="t-sm muted">Record hours instead of days</div></div><span class="switch off"></span></div>
+      <div class="ck" style="align-items:center"><div style="flex:1"><div class="t-base">Shift length</div></div><span class="chipv">8 hours</span>{{icon:chevron-right:sm}}</div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Navigation</h3>
+    <div class="stack">
+      <div class="seg"><div class="on">Buying</div><div>Stock</div></div>
+      <div class="tabs"><div class="tab on">Requests</div><div class="tab">Deliveries</div><div class="tab">Received</div></div>
+    </div>
+  </div>
+  <div class="bnav">
+    <div class="on"><span class="pill">{{icon:file-text}}</span>Report</div><div><span class="pill">{{icon:clipboard-check}}</span>Tasks</div>
+    <div><span class="pill">{{icon:package}}</span>Material</div><div><span class="pill">{{icon:user-check}}</span>Attendance</div><div><span class="pill">{{icon:menu}}</span>More</div>
+  </div>
+
+  <div class="sec"><h3>Project card · badges</h3>
+    <div class="card" style="padding:16px">
+      <div class="row" style="flex-wrap:nowrap"><span class="thumb">{{icon:image-plus}}</span><span class="t-base w6" style="flex:1">Green Park Tower B</span><span class="badge b-success">Active</span></div>
+      <div class="divider"></div>
+      <div class="row" style="flex-wrap:nowrap"><span class="ring"></span><span class="t-sm w6 num">32%</span><span style="flex:1"></span>{{icon:calendar:sm}}<span class="t-sm muted">1 Oct – 31 Mar</span>{{icon:ellipsis-vertical:sm}}</div>
+    </div>
+    <div class="row" style="margin-top:12px"><span class="badge b-neutral">Draft</span><span class="badge b-info">Partly received</span><span class="badge b-warning">Open</span><span class="badge b-danger">Delayed</span><span class="badge b-success">Paid</span></div>
+  </div>
+
+  <div class="sec"><h3>List rows</h3>
+    <div class="lrow"><div style="flex:1"><div class="t-base w6">Cement</div><div class="t-sm muted">ACC · bags</div><div class="t-sm num">In stock: 5 bags</div></div><span class="btn text sm">{{icon:plus:sm}}Update</span></div>
+    <div class="lrow"><div class="av a1 lg round">SK</div><div style="flex:1"><div class="t-base">Suresh Kumar</div><div class="t-sm muted">Mason · ₹800/day</div></div><div class="toggle3"><div class="on">P</div><div>½</div><div>A</div></div></div>
+    <div class="lrow"><div style="flex:1"><div class="t-base">Water tanker didn't come</div><div class="t-sm muted">Due 14 Oct · Ravi</div></div><span class="syncb" title="Not synced">{{icon:clock:sm}}</span><span class="badge b-warning">Open</span></div>
+  </div>
+
+  <div class="sec"><h3>Expenses (stacked bar + tiles)</h3>
+    <div class="t-sm muted">Total spent</div><div class="t-xl num" style="margin-bottom:8px">₹1,10,500</div>
+    <div class="bar"><div style="flex:42;background:var(--color-series-1)"></div><div style="flex:25;background:var(--color-series-2)"></div><div style="flex:18;background:var(--color-series-3)"></div><div style="flex:6;background:var(--color-series-4)"></div><div style="flex:5;background:var(--color-series-5)"></div><div style="flex:4;background:var(--color-series-6)"></div></div>
+    <div class="tiles" style="margin-top:12px">
+      <div class="tile" style="--c:var(--color-series-1)"><div class="t-sm muted">Material</div><div class="t-lg num">₹46,410</div></div>
+      <div class="tile" style="--c:var(--color-series-2)"><div class="t-sm muted">Subcontractor</div><div class="t-lg num">₹27,625</div></div>
+      <div class="tile" style="--c:var(--color-series-3)"><div class="t-sm muted">Attendance</div><div class="t-lg num">₹19,890</div></div>
+      <div class="tile" style="--c:var(--color-series-4)"><div class="t-sm muted">Petty spend</div><div class="t-lg num">₹6,630</div></div>
+      <div class="tile" style="--c:var(--color-series-5)"><div class="t-sm muted">Miscellaneous</div><div class="t-lg num">₹5,525</div></div>
+      <div class="tile" style="--c:var(--color-series-6)"><div class="t-sm muted">Assets</div><div class="t-lg num">₹4,420</div></div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Feed</h3>
+    <div class="feed stack">
+      <div class="fcard">
+        <div class="row" style="flex-wrap:nowrap"><div class="av a1 lg round">RS</div><div><div class="t-base"><b class="w6">Ravi Singh</b> raised an issue</div><div class="t-xs muted">2 h ago</div></div></div>
+        <div class="t-sm" style="margin:10px 0">Water tanker didn't come. Curing on level 3 is on hold.</div>
+        <div class="row"><span class="btn secondary sm">Reply</span><span style="flex:1"></span>{{icon:message-square:sm}}<span class="t-sm muted">3</span></div>
+      </div>
+      <div class="sysline">Ravi Singh joined as engineer</div>
+    </div>
+  </div>
+
+  <div class="sec"><h3>Banners · states · toasts</h3>
+    <div class="stack">
+      <div class="banner info">{{icon:info:sm}}<span>Reports are kept for 90 days.</span></div>
+      <div class="banner warning">{{icon:triangle-alert:sm}}<span>Stock below zero. Check the last delivery entry.</span></div>
+      <div class="empty"><div class="circ">{{icon:clipboard-check}}</div><div class="t-base w6">No tasks yet</div><div class="t-sm muted" style="margin:4px 0 12px">Add the work planned on this site to track progress day by day.</div><span class="btn primary">{{icon:plus:sm}}Add task</span></div>
+      <div class="empty"><div class="circ err">{{icon:circle-alert}}</div><div class="t-base w6">Couldn't load attendance</div><div class="t-sm muted" style="margin:4px 0 12px">Check your connection and try again.</div><span class="btn secondary">{{icon:refresh-cw:sm}}Try again</span></div>
+      <div class="toast ok">{{icon:check:sm}}Saved</div>
+      <div class="toast neutral">Attendance removed <b>Undo</b></div>
+    </div>
+  </div>
+</div>
