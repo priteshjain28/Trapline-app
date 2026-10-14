@@ -103,7 +103,7 @@ class FakeBackendTest {
         assertTrue(b.verifyOtp("9812345678", "000000").isFailure)
         val s = b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
         assertEquals("+919812345678", s.user.phone)
-        assertEquals("Sharma Constructions", s.org.name)
+        assertEquals("Sharma Constructions", s.org?.name)
     }
 
     @Test fun seedFeedIsNeverInTheFuture() = runTest {

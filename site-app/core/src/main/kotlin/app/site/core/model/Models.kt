@@ -19,7 +19,10 @@ enum class OrgRole { OWNER, ADMIN, MEMBER }
 
 enum class ProjectRole { MANAGER, ENGINEER, SUPERVISOR, STOREKEEPER, ACCOUNTANT, VIEWER }
 
-data class Session(val user: User, val org: Organisation, val orgRole: OrgRole)
+/** [org] is null for someone who signed in but hasn't created or joined an organisation yet. */
+data class Session(val user: User, val org: Organisation?, val orgRole: OrgRole?) {
+    val needsSetup: Boolean get() = user.name.isBlank() || org == null
+}
 
 enum class ProjectStatus { ACTIVE, ON_HOLD, COMPLETED, ARCHIVED }
 

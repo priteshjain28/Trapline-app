@@ -81,6 +81,27 @@ object Progress {
         return task.copy(doneQty = done, progressPct = newPct, status = status)
     }
 
+    /**
+     * Same rule as app.recompute_task() on the server, from all of a task's updates: quantity wins when the task
+     * has a planned quantity and any update has one; otherwise the latest reported percent.
+     */
+    fun fromUpdates(task: Task, updates: List<app.site.core.model.TaskUpdate>): Task {
+        val done = updates.sumOf { it.qtyDone ?: 0.0 }
+        val hasQty = updates.any { it.qtyDone != null }
+        val pct = when {
+            task.plannedQty != null && hasQty -> minOf(100, ((done / task.plannedQty) * 100).roundToInt())
+            else -> updates.filter { it.progressPct != null }
+                .maxWithOrNull(compareBy({ it.workDate }, { it.createdAt }))?.progressPct ?: 0
+        }
+        val status = when {
+            pct >= 100 -> TaskStatus.COMPLETED
+            task.status == TaskStatus.BLOCKED -> TaskStatus.BLOCKED
+            pct > 0 || done > 0 -> TaskStatus.IN_PROGRESS
+            else -> TaskStatus.NOT_STARTED
+        }
+        return task.copy(doneQty = done, progressPct = pct, status = status)
+    }
+
     /** Project progress = mean of task progress. Empty project = 0. */
     fun project(tasks: List<Task>): Int = if (tasks.isEmpty()) 0 else tasks.map { it.progressPct }.average().roundToInt()
 }

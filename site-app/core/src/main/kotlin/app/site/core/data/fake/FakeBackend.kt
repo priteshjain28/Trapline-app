@@ -3,6 +3,8 @@ package app.site.core.data.fake
 import app.site.core.data.ActivityRepository
 import app.site.core.data.AppError
 import app.site.core.data.AttendanceRepository
+import app.site.core.data.PeopleRepository
+import app.site.core.data.SyncRepository
 import app.site.core.data.ProjectRepository
 import app.site.core.data.ReportRepository
 import app.site.core.data.SessionRepository
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import java.time.Clock
@@ -50,7 +53,8 @@ class FakeBackend(
     private val latencyMs: Long = 250,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
-) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository {
+) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
+    PeopleRepository, SyncRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -112,12 +116,31 @@ class FakeBackend(
 
     override fun signOut() { _session.value = null }
 
-    fun updateProfileName(name: String) {
-        val u = _session.value?.user ?: return
-        val nu = u.copy(name = name.trim())
+    override suspend fun completeProfile(name: String, orgName: String?): Result<Session> {
+        val current = _session.value ?: return Result.failure(AppError.NotAllowed)
+        if (name.isBlank()) return Result.failure(AppError.Invalid("name", AppError.Reason.REQUIRED))
+        val nu = current.user.copy(name = name.trim())
         state.update { it.copy(users = it.users + (nu.id to nu)) }
-        _session.update { it?.copy(user = nu) }
+        val org = current.org ?: Organisation(newId(), orgName?.trim().orEmpty().ifBlank { "My Organisation" })
+            .also { o -> state.update { it.copy(org = o) } }
+        val next = current.copy(user = nu, org = org, orgRole = current.orgRole ?: OrgRole.OWNER)
+        _session.value = next
+        return Result.success(next)
     }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        val u = _session.value?.user ?: return Result.failure(AppError.NotAllowed)
+        state.update { it.copy(users = it.users - u.id) }
+        _session.value = null
+        return Result.success(Unit)
+    }
+
+    override fun people(): Flow<Map<String, User>> =
+        combine(state, _session) { s, session -> s.users + listOfNotNull(session?.user).associateBy { it.id } }
+
+    private val _sync = MutableStateFlow(app.site.core.data.SyncStatus())
+    override val status: StateFlow<app.site.core.data.SyncStatus> = _sync.asStateFlow()
+    override fun syncNow() {}
 
     // ------------------------------------------------------------------ projects
 
@@ -264,6 +287,9 @@ class FakeBackend(
     }
 
     override suspend fun markFailed(id: String): Result<Unit> = setReport(id) { it.copy(status = ReportStatus.FAILED) }
+
+    override suspend fun fetchFile(id: String): Result<String> =
+        state.value.reports[id]?.filePath?.let { Result.success(it) } ?: Result.failure(AppError.Unknown("no file"))
 
     private fun setReport(id: String, f: (Report) -> Report): Result<Unit> {
         state.update { s -> val r = s.reports[id] ?: return@update s; s.copy(reports = s.reports + (id to f(r))) }

@@ -1,0 +1,284 @@
+-- The phone's copy of the data it needs. Screens read only from here; SyncEngine keeps it in step with Supabase.
+-- Dates are ISO yyyy-MM-dd text, instants ISO-8601 text, money integer paise. Column names follow the server.
+
+CREATE TABLE person (
+  id TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT
+);
+
+CREATE TABLE project (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL,
+  address TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  progress_pct REAL NOT NULL DEFAULT 0,
+  shift_hours REAL NOT NULL DEFAULT 8,
+  attendance_remarks INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE task (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  unit TEXT,
+  planned_qty REAL,
+  done_qty REAL NOT NULL DEFAULT 0,
+  progress_pct REAL NOT NULL DEFAULT 0,
+  start_date TEXT,
+  due_date TEXT,
+  assignee_id TEXT,
+  status TEXT NOT NULL,
+  work_order_id TEXT
+);
+CREATE INDEX task_project ON task(project_id);
+
+CREATE TABLE task_update (
+  id TEXT NOT NULL PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  author_id TEXT,
+  work_date TEXT NOT NULL,
+  qty_done REAL,
+  progress_pct REAL,
+  remarks TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX task_update_task ON task_update(task_id);
+CREATE INDEX task_update_project_day ON task_update(project_id, work_date);
+
+-- Photos on an update. local_uri until uploaded; storage_path once the server has it.
+CREATE TABLE media (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  task_update_id TEXT,
+  local_uri TEXT,
+  storage_path TEXT,
+  taken_at TEXT NOT NULL
+);
+CREATE INDEX media_update ON media(task_update_id);
+
+CREATE TABLE worker (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  skill TEXT,
+  phone TEXT,
+  wage_type TEXT NOT NULL,
+  wage_paise INTEGER NOT NULL,
+  ot_rate_paise INTEGER NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX worker_project ON worker(project_id);
+
+-- One record per worker per day: phones merge on this key, like the server.
+CREATE TABLE attendance (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  worker_id TEXT NOT NULL,
+  work_date TEXT NOT NULL,
+  status TEXT NOT NULL,
+  ot_hours REAL NOT NULL DEFAULT 0,
+  remarks TEXT,
+  UNIQUE (project_id, worker_id, work_date)
+);
+
+CREATE TABLE report (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  from_date TEXT NOT NULL,
+  to_date TEXT NOT NULL,
+  parts TEXT NOT NULL,
+  status TEXT NOT NULL,
+  storage_path TEXT,
+  local_file TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
+CREATE TABLE activity (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  actor_id TEXT,
+  verb TEXT NOT NULL,
+  entity_id TEXT,
+  summary TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX activity_project ON activity(project_id, created_at);
+
+-- Changes made here, waiting to go to the server, oldest first.
+CREATE TABLE outbox (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  table_name TEXT NOT NULL,
+  row_id TEXT NOT NULL,
+  op TEXT NOT NULL,            -- upsert | delete | upload
+  payload TEXT NOT NULL,       -- JSON body (upsert), filter (delete), or upload descriptor
+  on_conflict TEXT,            -- natural key for upserts that merge (attendance)
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT
+);
+CREATE INDEX outbox_row ON outbox(table_name, row_id);
+
+-- Small things to remember between launches (the signed-in session's profile and organisation).
+CREATE TABLE kv (
+  key TEXT NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+CREATE TABLE sync_cursor (
+  table_name TEXT NOT NULL PRIMARY KEY,
+  cursor TEXT NOT NULL
+);
+
+-- ---------------------------------------------------------------- people
+
+upsertPerson:
+INSERT OR REPLACE INTO person VALUES ?;
+person:
+SELECT * FROM person WHERE id = ?;
+people:
+SELECT * FROM person;
+
+-- ---------------------------------------------------------------- projects
+
+upsertProject:
+INSERT OR REPLACE INTO project VALUES ?;
+projects:
+SELECT * FROM project ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'on_hold' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, lower(name);
+project:
+SELECT * FROM project WHERE id = ?;
+projectIds:
+SELECT id FROM project;
+updateSettings:
+UPDATE project SET shift_hours = ?, attendance_remarks = ? WHERE id = ?;
+updateProjectProgress:
+UPDATE project SET progress_pct = (SELECT coalesce(avg(progress_pct), 0) FROM task WHERE task.project_id = project.id) WHERE id = ?;
+deleteProject:
+DELETE FROM project WHERE id = ?;
+
+-- ---------------------------------------------------------------- tasks
+
+upsertTask:
+INSERT OR REPLACE INTO task VALUES ?;
+tasks:
+SELECT * FROM task WHERE project_id = ? ORDER BY number IS NULL DESC, number DESC;
+task:
+SELECT * FROM task WHERE id = ?;
+updateTaskProgress:
+UPDATE task SET done_qty = ?, progress_pct = ?, status = ? WHERE id = ?;
+deleteTask:
+DELETE FROM task WHERE id = ?;
+
+upsertUpdate:
+INSERT OR REPLACE INTO task_update VALUES ?;
+updatesForTask:
+SELECT * FROM task_update WHERE task_id = ? ORDER BY work_date DESC, created_at DESC;
+updatesInRange:
+SELECT * FROM task_update WHERE project_id = ? AND work_date BETWEEN ? AND ? ORDER BY created_at;
+deleteUpdate:
+DELETE FROM task_update WHERE id = ?;
+
+upsertMedia:
+INSERT OR REPLACE INTO media VALUES ?;
+mediaForUpdate:
+SELECT * FROM media WHERE task_update_id = ? ORDER BY taken_at;
+mediaForProject:
+SELECT * FROM media WHERE project_id = ?;
+setMediaStoragePath:
+UPDATE media SET storage_path = ? WHERE id = ?;
+deleteMedia:
+DELETE FROM media WHERE id = ?;
+
+-- ---------------------------------------------------------------- workers and attendance
+
+upsertWorker:
+INSERT OR REPLACE INTO worker VALUES ?;
+workers:
+SELECT * FROM worker WHERE project_id = ? AND active = 1 ORDER BY lower(name);
+deleteWorker:
+DELETE FROM worker WHERE id = ?;
+
+upsertAttendance:
+INSERT OR REPLACE INTO attendance VALUES ?;
+attendanceOn:
+SELECT * FROM attendance WHERE project_id = ? AND work_date = ?;
+attendanceBetween:
+SELECT * FROM attendance WHERE project_id = ? AND work_date BETWEEN ? AND ?;
+attendanceOne:
+SELECT * FROM attendance WHERE project_id = ? AND worker_id = ? AND work_date = ?;
+clearAttendance:
+DELETE FROM attendance WHERE project_id = ? AND worker_id = ? AND work_date = ?;
+deleteAttendance:
+DELETE FROM attendance WHERE id = ?;
+
+-- ---------------------------------------------------------------- reports and feed
+
+upsertReport:
+INSERT OR REPLACE INTO report VALUES ?;
+reports:
+SELECT * FROM report WHERE project_id = ? AND expires_at > ? ORDER BY created_at DESC;
+report:
+SELECT * FROM report WHERE id = ?;
+setReportFile:
+UPDATE report SET status = ?, storage_path = ?, local_file = ? WHERE id = ?;
+deleteReport:
+DELETE FROM report WHERE id = ?;
+
+upsertActivity:
+INSERT OR REPLACE INTO activity VALUES ?;
+activity:
+SELECT * FROM activity WHERE project_id = ? ORDER BY created_at DESC;
+deleteActivity:
+DELETE FROM activity WHERE id = ?;
+
+-- ---------------------------------------------------------------- outbox and cursors
+
+enqueue:
+INSERT INTO outbox (table_name, row_id, op, payload, on_conflict) VALUES (?, ?, ?, ?, ?);
+nextOutbox:
+SELECT * FROM outbox ORDER BY seq LIMIT ?;
+pendingFor:
+SELECT count(*) FROM outbox WHERE table_name = ? AND row_id = ?;
+pendingCount:
+SELECT count(*) FROM outbox;
+failedCount:
+SELECT count(*) FROM outbox WHERE attempts > 0;
+doneOutbox:
+DELETE FROM outbox WHERE seq = ?;
+failOutbox:
+UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE seq = ?;
+
+kvGet:
+SELECT value FROM kv WHERE key = ?;
+kvPut:
+INSERT OR REPLACE INTO kv VALUES (?, ?);
+kvDelete:
+DELETE FROM kv WHERE key = ?;
+
+cursorFor:
+SELECT cursor FROM sync_cursor WHERE table_name = ?;
+setCursor:
+INSERT OR REPLACE INTO sync_cursor VALUES (?, ?);
+
+wipe {
+  DELETE FROM person;
+  DELETE FROM project;
+  DELETE FROM task;
+  DELETE FROM task_update;
+  DELETE FROM media;
+  DELETE FROM worker;
+  DELETE FROM attendance;
+  DELETE FROM report;
+  DELETE FROM activity;
+  DELETE FROM outbox;
+  DELETE FROM sync_cursor;
+  DELETE FROM kv;
+}
