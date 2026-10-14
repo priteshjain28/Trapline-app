@@ -13,24 +13,24 @@
   "height": 968
  },
  "height_delta_pct": 0.0,
- "score": 17.6,
+ "score": 13.6,
  "verdict": "different",
  "regions": [
   {
    "x": 0,
    "y": 560,
    "w": 1344,
-   "h": 784,
-   "cells": 57,
-   "where": "top centre"
+   "h": 896,
+   "cells": 74,
+   "where": "middle centre"
   },
   {
    "x": 0,
-   "y": 1456,
+   "y": 1568,
    "w": 1344,
-   "h": 560,
-   "cells": 33,
-   "where": "middle centre"
+   "h": 672,
+   "cells": 53,
+   "where": "bottom centre"
   },
   {
    "x": 1232,
@@ -58,7 +58,7 @@
   }
  ],
  "files": {
-  "original": "/tmp/tmpx44jyaek/S28-profile.png",
+  "original": "/tmp/tmpg789r0k2/S28-profile.png",
   "clone": "/home/user/Trapline-app/replica/clone-screens/S28.png"
  },
  "screen": "S28",

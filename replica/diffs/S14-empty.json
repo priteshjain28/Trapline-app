@@ -1,0 +1,74 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 5.7,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 0,
+   "w": 1232,
+   "h": 2015,
+   "cells": 98,
+   "where": "middle centre"
+  },
+  {
+   "x": 560,
+   "y": 2464,
+   "w": 672,
+   "h": 224,
+   "cells": 10,
+   "where": "bottom right"
+  },
+  {
+   "x": 1007,
+   "y": 0,
+   "w": 336,
+   "h": 112,
+   "cells": 3,
+   "where": "top right"
+  },
+  {
+   "x": 896,
+   "y": 112,
+   "w": 224,
+   "h": 224,
+   "cells": 3,
+   "where": "top right"
+  },
+  {
+   "x": 0,
+   "y": 2464,
+   "w": 224,
+   "h": 224,
+   "cells": 3,
+   "where": "bottom left"
+  },
+  {
+   "x": 336,
+   "y": 2464,
+   "w": 112,
+   "h": 224,
+   "cells": 2,
+   "where": "bottom left"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpg789r0k2/S14-site-grn-empty.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S14-empty.png"
+ },
+ "screen": "S14",
+ "state_note": ""
+}

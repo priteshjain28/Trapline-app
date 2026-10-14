@@ -1,0 +1,66 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 8.6,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 112,
+   "y": 448,
+   "w": 1120,
+   "h": 672,
+   "cells": 26,
+   "where": "top centre"
+  },
+  {
+   "x": 336,
+   "y": 1232,
+   "w": 672,
+   "h": 560,
+   "cells": 14,
+   "where": "middle centre"
+  },
+  {
+   "x": 0,
+   "y": 112,
+   "w": 896,
+   "h": 336,
+   "cells": 11,
+   "where": "top left"
+  },
+  {
+   "x": 784,
+   "y": 2352,
+   "w": 560,
+   "h": 336,
+   "cells": 10,
+   "where": "bottom right"
+  },
+  {
+   "x": 336,
+   "y": 0,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpg789r0k2/S30-gallery-media.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S30.png"
+ },
+ "screen": "S30",
+ "state_note": ""
+}

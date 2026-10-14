@@ -75,3 +75,8 @@ Harder than expected, said plainly:
 - **Catalogue duplicates.** "Cement" and "cement " would be two materials, so ids come from the normalised name, spec
   and unit; offline adds on two phones merge into one row.
 - **Inviting is online only.** The SMS comes from the server, so the invite sheet says so when offline.
+
+Also built after the top five: a Material part in reports, and a managed list of task categories (S10 chips). Must-haves
+31 of 33. Left: the in-app camera (S32; the phone's camera app works today) and the report parts that need screens not
+built yet (issues, payables). Cosmetic, seen in screenshots: on S14 the date field is a little shorter than the challan
+field beside it.

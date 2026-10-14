@@ -1,0 +1,138 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 30.9,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 0,
+   "w": 1344,
+   "h": 1680,
+   "cells": 82,
+   "where": "top centre"
+  },
+  {
+   "x": 0,
+   "y": 1344,
+   "w": 336,
+   "h": 336,
+   "cells": 9,
+   "where": "middle left"
+  },
+  {
+   "x": 896,
+   "y": 2240,
+   "w": 336,
+   "h": 336,
+   "cells": 6,
+   "where": "bottom right"
+  },
+  {
+   "x": 1120,
+   "y": 0,
+   "w": 224,
+   "h": 224,
+   "cells": 3,
+   "where": "top right"
+  },
+  {
+   "x": 112,
+   "y": 0,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 0,
+   "y": 112,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 1232,
+   "y": 560,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top right"
+  },
+  {
+   "x": 784,
+   "y": 2352,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom centre"
+  },
+  {
+   "x": 112,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 336,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 896,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  },
+  {
+   "x": 0,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 1007,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  },
+  {
+   "x": 1232,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpg789r0k2/S15-material-list.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S15.png"
+ },
+ "screen": "S15",
+ "state_note": "different data: reference has 1 material, clone has the seed site"
+}
