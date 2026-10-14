@@ -64,6 +64,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
     var photos by rememberSaveable { mutableStateOf(true) }
     var attendance by rememberSaveable { mutableStateOf(true) }
     var wages by rememberSaveable { mutableStateOf(false) }
+    var material by rememberSaveable { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
 
@@ -72,7 +73,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
         else -> today.minusDays(d) to today
     }
     // photos ride on work done, so they don't count on their own
-    val nothingPicked = !updates && !attendance
+    val nothingPicked = !updates && !attendance && !material
 
     Column(Modifier.fillMaxSize()) {
         Column(
@@ -113,6 +114,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             CheckRow(stringResource(R.string.part_attendance), attendance, { attendance = it }, description = stringResource(R.string.part_attendance_body))
             CheckRow(stringResource(R.string.part_wages), wages && attendance, { wages = it }, description = stringResource(R.string.part_wages_body),
                 enabled = attendance)
+            CheckRow(stringResource(R.string.part_material), material, { material = it }, description = stringResource(R.string.part_material_body))
             Text(stringResource(R.string.report_more_parts_later), Modifier.padding(vertical = Space.s3),
                 style = SiteTheme.type.xs, color = SiteTheme.colors.textMuted)
         }
@@ -121,7 +123,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             PrimaryButton(stringResource(R.string.action_create_report), {
                 busy = true
                 scope.launch {
-                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance)
+                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance, material)
                     container.reportService.create(NewReport(project.id, type, range.first, range.second, parts))
                         .onSuccess { error = null; onReports() }
                         .onFailure { error = it }

@@ -23,6 +23,7 @@ class ReportService(
     private val attendance: AttendanceRepository,
     private val reports: ReportRepository,
     private val people: suspend () -> Map<String, User>,
+    private val materials: app.site.core.data.MaterialRepository,
     private val renderer: PdfReportRenderer,
     private val scope: CoroutineScope,
 ) {
@@ -46,6 +47,8 @@ class ReportService(
                 attendance.workers(r.projectId).first(),
                 attendance.range(r.projectId, r.from, r.to).first(),
                 people(),
+                if (r.parts.material) materials.stock(r.projectId).first().map { it to materials.history(r.projectId, it.material.id).first() }
+                else emptyList(),
             )
             val file = renderer.render(r.id, content)
             reports.markReady(r.id, file.absolutePath)

@@ -302,6 +302,10 @@ class ReportAndFeedFlows : FlowTest() {
         openProject()
         tap(chip("Work done"))
         tap(chip("Labour"))
+        // material alone is still a report
+        button("Create report").assertIsEnabled()
+        scrollTo("Material")
+        tap(chip("Material"))
         button("Create report").assertIsNotEnabled()
     }
 

@@ -541,7 +541,7 @@ class SyncedBackend(
     }
 
     private fun partsJson(p: ReportParts) = buildJsonObject {
-        put("task_updates", p.taskUpdates); put("photos", p.photos); put("attendance", p.attendance); put("wages", p.wages)
+        put("task_updates", p.taskUpdates); put("photos", p.photos); put("attendance", p.attendance); put("wages", p.wages); put("material", p.material)
     }
 
     private fun report(r: ReportRow): Report {
@@ -549,7 +549,7 @@ class SyncedBackend(
         return Report(
             r.id, r.project_id, if (r.type == "summary") ReportType.SUMMARY else ReportType.DETAILED,
             LocalDate.parse(r.from_date), LocalDate.parse(r.to_date),
-            ReportParts(parts.bool("task_updates", true), parts.bool("photos", true), parts.bool("attendance", true), parts.bool("wages", false)),
+            ReportParts(parts.bool("task_updates", true), parts.bool("photos", true), parts.bool("attendance", true), parts.bool("wages", false), parts.bool("material", false)),
             ReportStatus.entries.firstOrNull { it.name.equals(r.status, true) } ?: ReportStatus.QUEUED,
             SyncEngine.parseInstant(r.created_at), SyncEngine.parseInstant(r.expires_at), r.local_file,
         )

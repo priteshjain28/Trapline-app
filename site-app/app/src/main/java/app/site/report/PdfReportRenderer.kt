@@ -56,6 +56,7 @@ class PdfReportRenderer(private val context: Context) {
                 content.type == ReportType.DETAILED -> detailed(w, content)
                 else -> summary(w, content)
             }
+            material(w, content)
             w.finish()
             out.outputStream().use { doc.writeTo(it) }
         } finally {
@@ -105,6 +106,16 @@ class PdfReportRenderer(private val context: Context) {
             w.gap(8f)
             w.rule()
             w.gap(8f)
+        }
+    }
+
+    private fun material(w: Writer, c: ReportContent) {
+        if (c.materials.isEmpty()) return
+        w.ensure(60f)
+        w.gap(6f)
+        w.text(s(R.string.report_pdf_material), h2)
+        for (m in c.materials) {
+            w.text("• ${m.name} — " + s(R.string.report_pdf_material_row, Format.qty(m.received), Format.qty(m.out), Format.qty(m.onSiteNow), m.uom), body)
         }
     }
 

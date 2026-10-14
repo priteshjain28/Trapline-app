@@ -142,3 +142,28 @@ class MaterialTest {
         assertEquals(mapOf("Cement" to 135.0, "Red bricks" to 2800.0, "River sand" to 6.0, "TMT bar" to 1500.0), stock)
     }
 }
+
+class MaterialReportTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun reportHasMaterialMovedInThePeriod() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val today = b.today()
+        val material = b.stock(tower.id).first().map { it to b.history(tower.id, it.material.id).first() }
+        fun build(from: java.time.LocalDate, parts: app.site.core.model.ReportParts = app.site.core.model.ReportParts()) =
+            app.site.core.logic.ReportBuilder.build(tower, app.site.core.model.ReportType.SUMMARY, from, today, parts,
+                emptyList(), emptyList(), emptyList(), emptyList(), emptyMap(), material)
+        // last 7 days: sand and steel came in 5 days ago; cement went out 6 and 2 days ago
+        val week = build(today.minusDays(7)).materials.associateBy { it.name }
+        assertEquals(setOf("Cement · OPC 53", "Red bricks · Class A", "River sand", "TMT bar · Fe 500D 12mm"), week.keys)
+        assertEquals(105.0, week.getValue("Cement · OPC 53").out)
+        assertEquals(0.0, week.getValue("Cement · OPC 53").received)
+        assertEquals(135.0, week.getValue("Cement · OPC 53").onSiteNow)
+        assertEquals(12.0, week.getValue("River sand").received)
+        // yesterday nothing moved
+        assertTrue(build(today.minusDays(1)).materials.isEmpty())
+        // the part can be left out
+        assertTrue(build(today.minusDays(7), app.site.core.model.ReportParts(material = false)).materials.isEmpty())
+    }
+}

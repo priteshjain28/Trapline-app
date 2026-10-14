@@ -85,6 +85,7 @@ class AppContainer(
     val reportService = ReportService(
         projects = projects, tasks = tasks, attendance = attendance, reports = reports,
         people = { people.people().first() },
+        materials = materials,
         renderer = PdfReportRenderer(context),
         scope = appScope,
     )

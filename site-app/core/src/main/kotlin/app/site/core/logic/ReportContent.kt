@@ -27,7 +27,10 @@ data class ReportContent(
     val taskSummary: List<TaskRow>,
     val workerSummary: List<WorkerRow>,
     val totals: Totals,
+    /** One row per material that moved in the period, by name. */
+    val materials: List<MaterialRow> = emptyList(),
 ) {
+    data class MaterialRow(val name: String, val uom: String, val received: Double, val out: Double, val onSiteNow: Double)
     data class Day(val date: LocalDate, val updates: List<UpdateRow>, val attendance: Headcount?, val photos: List<String>)
     data class UpdateRow(
         val taskNumber: Int?, val taskName: String, val qtyDone: Double?, val unit: String?,
@@ -38,7 +41,7 @@ data class ReportContent(
     data class WorkerRow(val name: String, val skill: String?, val days: Double, val otHours: Double, val wagesPaise: Long)
     data class Totals(val updates: Int, val photos: Int, val workerDays: Double, val wagesPaise: Long)
 
-    val isEmpty: Boolean get() = days.isEmpty() && taskSummary.isEmpty() && workerSummary.isEmpty()
+    val isEmpty: Boolean get() = days.isEmpty() && taskSummary.isEmpty() && workerSummary.isEmpty() && materials.isEmpty()
 }
 
 object ReportBuilder {
@@ -53,6 +56,8 @@ object ReportBuilder {
         workers: List<Worker>,
         attendance: List<Attendance>,
         people: Map<String, User>,
+        /** Each material on the site with its history (from MaterialRepository.stock and history). */
+        material: List<Pair<app.site.core.model.StockItem, List<app.site.core.model.StockEntry>>> = emptyList(),
     ): ReportContent {
         val inRange = { d: LocalDate -> !d.isBefore(from) && !d.isAfter(to) }
         val taskById = tasks.associateBy { it.id }
@@ -98,7 +103,16 @@ object ReportBuilder {
             workerDays = if (parts.attendance) att.sumOf { Wages.dayUnits(it.status) } else 0.0,
             wagesPaise = if (parts.wages) wageLines.sumOf { it.amountPaise } else 0,
         )
-        return ReportContent(project, type, from, to, parts, days, taskSummary, workerSummary, totals)
+        val materials = if (parts.material) {
+            material.mapNotNull { (item, entries) ->
+                val moved = entries.filter { inRange(it.date) }
+                if (moved.isEmpty()) return@mapNotNull null
+                ReportContent.MaterialRow(item.material.label, item.material.uom,
+                    received = moved.filter { it.qty > 0 }.sumOf { it.qty }, out = -moved.filter { it.qty < 0 }.sumOf { it.qty },
+                    onSiteNow = item.inStock)
+            }.sortedBy { it.name.lowercase() }
+        } else emptyList()
+        return ReportContent(project, type, from, to, parts, days, taskSummary, workerSummary, totals, materials)
     }
 
     private fun headcount(list: List<Attendance>) = ReportContent.Headcount(

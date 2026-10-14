@@ -152,6 +152,8 @@ data class ReportParts(
     val photos: Boolean = true,
     val attendance: Boolean = true,
     val wages: Boolean = false,
+    /** Material received, issued and used in the period, and what's on site now. */
+    val material: Boolean = true,
 )
 
 enum class ReportStatus { QUEUED, RENDERING, READY, FAILED }

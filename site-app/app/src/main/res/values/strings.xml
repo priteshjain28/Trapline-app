@@ -146,7 +146,7 @@
     <string name="part_attendance_body">Who was on site each day</string>
     <string name="part_wages">Wages</string>
     <string name="part_wages_body">Wages earned in the period, from attendance</string>
-    <string name="report_more_parts_later">Material, issues and payments can be added to reports once those screens are built.</string>
+    <string name="report_more_parts_later">Issues and payments can be added to reports once those screens are built.</string>
     <string name="reports_title">Reports</string>
     <string name="reports_kept">Reports are kept for 90 days.</string>
     <string name="reports_empty_title">No reports yet</string>
@@ -432,4 +432,8 @@
     <string name="field_site_photo">Site photo (optional)</string>
     <string name="a11y_site_photo">Site photo</string>
     <string name="a11y_company_logo">Company logo</string>
+    <string name="part_material">Material</string>
+    <string name="part_material_body">Received, issued and used, and what\'s on site now</string>
+    <string name="report_pdf_material">Material</string>
+    <string name="report_pdf_material_row">in %1$s, out %2$s, on site %3$s %4$s</string>
 </resources>
