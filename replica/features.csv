@@ -1,10 +1,10 @@
 feature,area,priority,original,clone,notes
 Sign in with phone number and OTP,onboarding,must,yes,yes,"S01; verified phone seen on S28; build: flow built (S01); fake OTP, demo code 123456 until /replica-backend; backend: Supabase phone auth + MSG91 SMS hook (DLT templates needed); demo build uses 123456"
-Organisation with name and logo,onboarding,must,yes,partial,S29 observed; build: org shown in header; edit screen and logo not built; backend: named at first sign-in; logo not built
-User profile (name role email phone),onboarding,must,yes,partial,"S28 observed; build: S28 name, phone, role, sign out; no email"
+Organisation with name and logo,onboarding,must,yes,yes,"S29 observed; build: S29 company screen: owners and admins rename and set a logo (org-assets bucket, offline upload)"
+User profile (name role email phone),onboarding,must,yes,yes,"S28 observed; build: S28 name, email (checked), verified phone, real company role, sign out, delete account"
 Projects list with search,projects,must,yes,yes,S04 observed; build: S04
 Create project,projects,must,yes,yes,"S03; ""Create New"" on S04; build: S03, dates validated"
-Project card with image status progress and dates,projects,must,yes,partial,S04 observed; build: S04 card; project image upload not built
+Project card with image status progress and dates,projects,must,yes,yes,S04 observed; build: S04 card with cover photo (set when the site is created; changing it later waits for S35 site profile)
 Project switcher inside a project,projects,must,yes,yes,"S05 ""palak ⇕"" observed; build: S05 bottom sheet"
 Five-tab project shell (Report Task Material Attendance More),platform,must,yes,yes,S05 observed; build: S05
 Task list with search by id or name,tasks,must,yes,yes,S08 observed; build: S08
@@ -17,19 +17,19 @@ Report parts checklist,reports,must,yes,partial,"S06 observed: 15+ parts; build:
 Detailed (day-wise) report,reports,must,yes,yes,S06 observed; build: on-device PDF until the server worker exists
 Generated reports list,reports,must,yes,yes,"S07 observed; build: S07 open, share, retry"
 Share report file,reports,must,yes,yes,inferred; covers WhatsApp via share sheet; build: Android share sheet
-Material catalogue with spec and unit,material,must,yes,no,"S15 ""cement / acc / UOM pk"""
-Site stock list with in-stock qty,material,must,yes,no,S15 observed
-Add material and update stock,material,must,yes,no,"S15 ""+ Add Material"" ""+ Update"""
-Site GRN (material received),material,must,yes,no,S14 observed
-Material issue to a task,material,must,yes,no,S19 observed
+Material catalogue with spec and unit,material,must,yes,yes,S15 observed; build: company catalogue with spec and unit; the same material typed on two phones merges into one
+Site stock list with in-stock qty,material,must,yes,yes,"S15 observed; build: S15 on site with search; stock computed from receipts, issues and corrections like the server ledger"
+Add material and update stock,material,must,yes,yes,S15 observed; build: add material already on site; Update = used or counted (records the difference); S16 history per material
+Site GRN (material received),material,must,yes,yes,"S14 observed; build: S14 record delivery with challan, several materials, new material inline; numbered by the server"
+Material issue to a task,material,must,yes,yes,"S19 observed; build: S19 issue to a task, never more than the site holds (checked offline too)"
 Labour attendance by date with stepper,labour,must,yes,yes,"S21 observed; build: S21 P/½/A, OT, notes"
 Add worker,labour,must,yes,yes,S21 FAB observed; S22 form inferred; build: S22
 Labour on site count,labour,must,yes,yes,S21 observed; build: S21
 Shift length setting (default 8 hours),labour,must,yes,yes,S24 observed; build: S24
 In-app camera for photos,photos,must,yes,partial,S32 observed; build: uses the phone's camera app via intent; S32 in-app camera not built
-Gallery of project photos,photos,must,yes,no,S30 observed
+Gallery of project photos,photos,must,yes,yes,"S30 observed; build: S30 every site photo (work updates + added via camera or phone gallery), grid and viewer"
 Activity feed with inline actions,feed,must,yes,yes,S27 observed; build: S27 open task action; replies not built
-Members and roles (org and project level),team,must,yes,partial,"S25 Members; S28/S27 roles; backend: roles enforced by RLS, invite function; team screen (S36) not built"
+Members and roles (org and project level),team,must,yes,yes,"S36 inferred from S25 Members; build: S36 people on a site, invite by phone with a role (SMS via server), change role, remove"
 Offline entry with background sync,platform,must,unknown,yes,"unverified on original (src 14); must for sites; backend: SQLite + outbox + SyncEngine, 8 sync tests; WorkManager every 15 min"
 Plain-language validation errors,platform,must,partial,yes,S21 shows a raw backend error: beat it; build: every error mapped to strings.xml; no server text
 Summary report,reports,should,yes,yes,"S06 ""NEW"" observed; build: S06"
@@ -41,7 +41,7 @@ GRN against a PO with partial delivery,material,should,yes,no,inferred
 Transfer orders between projects,material,should,yes,no,S17 observed
 Transfer requests,material,should,yes,no,S18 observed
 Material returns,material,should,yes,no,S20 observed
-Consumption records,material,should,yes,no,"S06 ""Consumptions"" part"
+Consumption records,material,should,yes,partial,S06 Consumptions part; build: 'Used' stock updates are consumption records; not yet a report part
 Vendors,material,should,unknown,no,inferred; POs need one
 Attendance payables with total due,labour,should,yes,partial,S23 observed; build: S21 Wages tab: last 7 days from attendance; recording not built
 Review and record payable for a period,labour,should,yes,no,S23 FAB observed
@@ -54,7 +54,7 @@ Custom payables,money,should,yes,no,S06 Payables > Custom
 Issues with due date assignee and status,issues,should,yes,no,S31 observed
 Issue tabs Open Closed All with counts,issues,should,yes,no,S31 observed
 Comments and replies,feed,should,yes,no,"S27 counts and ""Give Reply"""
-Photo albums,photos,should,yes,no,S30 Albums observed
+Photo albums,photos,should,yes,yes,S30 Albums observed; build: albums with counts and covers; move photos in and out; same name on two phones = one album
 Upload photos from phone,photos,should,yes,yes,"S30 upload FAB observed; build: gallery picker, copied into app storage"
 Correct or delete attendance and GRN entries with audit trail,labour,should,partial,partial,"users complain it is missing (src 11); build: attendance can be changed or cleared; audit trail is in the schema, not the fake layer; backend: attendance change/clear with server audit_log; GRN not built"
 Help entry point,platform,should,yes,partial,"S05 ""Help"" observed; build: button opens a placeholder"

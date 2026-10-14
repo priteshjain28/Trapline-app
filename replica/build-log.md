@@ -11,22 +11,29 @@ Room + Supabase will implement, so `/replica-backend` changes `AppContainer` and
 | --- | --- | --- | --- | --- |
 | S01 sign in | 2026-10-14 | partial | Real OTP (fake: code 123456), language picker (S02) | – |
 | S03 new project | 2026-10-14 | done | Project image | – |
-| S04 projects | 2026-10-14 | done | Card overflow menu (archive, edit) | – |
+| S04 projects | 2026-10-14 | done | Card overflow menu (archive, edit); changing the cover photo later | – |
 | S05 project shell | 2026-10-14 | done | Messages and Help open placeholders | – |
 | S06 report builder | 2026-10-14 | done | Parts for material, issues and payables (their screens come first) | The original's period radios run off-screen; ours wrap as chips |
 | S07 reports | 2026-10-14 | done | – | Rendering moved on-device (PdfDocument) as a stand-in for the server worker |
 | S08 tasks | 2026-10-14 | done | "List view" switch (other views were never seen) | – |
 | S09 task detail + update | 2026-10-14 | done | Comments, editing or deleting an update | Photo URIs from the gallery can lose permission, so picks are copied into app storage |
 | S10 new task | 2026-10-14 | done | Assignee picker (needs members, S36) | – |
-| S12–S20 material | 2026-10-14 | stub | Everything. The tab structure (Buying/Stock and their sub-tabs) is in place, with a placeholder | Biggest remaining area: 13 features, 5 of them must-haves |
+| S14 received at site | 2026-10-14 | done | Deliveries against purchase orders (S13), photos of the challan | Each delivery is a header plus lines; the outbox sends the header first so the server's line rules pass |
+| S15 on site | 2026-10-14 | done | Subcontractor inventory switch | Stock is never stored: computed from receipts, issues and corrections (same rule as the server ledger) so it is right offline |
+| S16 material history | 2026-10-14 | done | Correcting or deleting an entry | – |
+| S19 issued | 2026-10-14 | done | Issue to a subcontractor | Over-issue is checked on the phone; two phones issuing offline can still overdraw (see notes) |
+| S12, S13, S17, S18, S20 material | 2026-10-14 | stub | Requests, deliveries against orders, transfers, returns | – |
+| S29 company | 2026-10-14 | done | – | Needed a new storage bucket (org-assets) and path rules |
+| S30 photos and albums | 2026-10-14 | done | Video, deleting a photo | Albums typed on two phones merge (id from the name) |
+| S36 people on a site | 2026-10-14 | done | Company-level admins screen; leaving a site you were removed from still shows its cached data until sign-out | Inviting needs a connection: the server sends the SMS |
 | S21 attendance register | 2026-10-14 | done | Hourly marking (hours per day) | – |
 | S22 add worker | 2026-10-14 | done | Labour contractor link | – |
 | S23 payables | 2026-10-14 | partial | Recording payables and payments; only a 7-day wages preview | – |
 | S24 attendance settings | 2026-10-14 | done | – | – |
 | S25 more | 2026-10-14 | done | 9 of its 12 items open placeholders | – |
 | S27 feed | 2026-10-14 | done | Replies and comments | – |
-| S28 profile | 2026-10-14 | partial | Email | – |
-| S02, S11, S13–S20, S26, S29–S38 | – | not started | – | – |
+| S28 profile | 2026-10-14 | done | – | Showed 'Owner' for everyone; now the real company role |
+| S02, S11, S26, S31–S35, S37, S38 | – | not started | – | – |
 
 Built: 15 screens (12 done, 3 partial) + 1 stub tab, out of 38 in the recon.
 Must-haves: 18 of 33 done (`parity.py`: 47/100 overall). CI green on 2026-10-14: 15 core tests, debug APK,
@@ -52,3 +59,19 @@ Must-haves: 18 of 33 done (`parity.py`: 47/100 overall). CI green on 2026-10-14:
 build time the app uses it; without them it stays the demo. CI green: `site-app.yml` (29 core tests, APK, screenshots)
 and `backend.yml` (database tests on Postgres 16, Deno tests and type-check). Not yet run against a real Supabase
 project, which needs the user's keys. See `replica/backend.md`. Parity 50.9 (20 of 33 must-haves).
+
+## Gaps build (2026-10-14)
+
+From `/replica-diff`'s top five. Built: material (S14, S15, S16, S19), photos and albums (S30), people (S36), company (S29),
+profile email, site cover photo. Each has its data layer on the demo and on the offline-first synced layer (local schema
+v2 to v5, each with a migration for installed builds), core tests (48 pass, including two-phone sync for material,
+albums and invites), flow tests with the accessibility audit, and screenshots. Parity 50.9 → 66.9; must-haves 20 → 30 of 33.
+
+Harder than expected, said plainly:
+
+- **Material on several phones.** Stock is a sum, so two phones each issuing the last 50 bags offline both succeed, and
+  the site shows -50 after sync. The server records what happened rather than refusing work already done on site; the
+  stock list shows negative stock in red so someone recounts. A server-side warning is a follow-up.
+- **Catalogue duplicates.** "Cement" and "cement " would be two materials, so ids come from the normalised name, spec
+  and unit; offline adds on two phones merge into one row.
+- **Inviting is online only.** The SMS comes from the server, so the invite sheet says so when offline.
