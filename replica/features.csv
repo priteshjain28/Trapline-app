@@ -1,6 +1,6 @@
 feature,area,priority,original,clone,notes
-Sign in with phone number and OTP,onboarding,must,yes,partial,"S01; verified phone seen on S28; build: flow built (S01); fake OTP, demo code 123456 until /replica-backend"
-Organisation with name and logo,onboarding,must,yes,partial,S29 observed; build: org shown in header; edit screen and logo not built
+Sign in with phone number and OTP,onboarding,must,yes,yes,"S01; verified phone seen on S28; build: flow built (S01); fake OTP, demo code 123456 until /replica-backend; backend: Supabase phone auth + MSG91 SMS hook (DLT templates needed); demo build uses 123456"
+Organisation with name and logo,onboarding,must,yes,partial,S29 observed; build: org shown in header; edit screen and logo not built; backend: named at first sign-in; logo not built
 User profile (name role email phone),onboarding,must,yes,partial,"S28 observed; build: S28 name, phone, role, sign out; no email"
 Projects list with search,projects,must,yes,yes,S04 observed; build: S04
 Create project,projects,must,yes,yes,"S03; ""Create New"" on S04; build: S03, dates validated"
@@ -29,8 +29,8 @@ Shift length setting (default 8 hours),labour,must,yes,yes,S24 observed; build: 
 In-app camera for photos,photos,must,yes,partial,S32 observed; build: uses the phone's camera app via intent; S32 in-app camera not built
 Gallery of project photos,photos,must,yes,no,S30 observed
 Activity feed with inline actions,feed,must,yes,yes,S27 observed; build: S27 open task action; replies not built
-Members and roles (org and project level),team,must,yes,no,S25 Members; S28/S27 roles
-Offline entry with background sync,platform,must,unknown,no,unverified on original (src 14); must for sites
+Members and roles (org and project level),team,must,yes,partial,"S25 Members; S28/S27 roles; backend: roles enforced by RLS, invite function; team screen (S36) not built"
+Offline entry with background sync,platform,must,unknown,yes,"unverified on original (src 14); must for sites; backend: SQLite + outbox + SyncEngine, 8 sync tests; WorkManager every 15 min"
 Plain-language validation errors,platform,must,partial,yes,S21 shows a raw backend error: beat it; build: every error mapped to strings.xml; no server text
 Summary report,reports,should,yes,yes,"S06 ""NEW"" observed; build: S06"
 Report presets Today 7 days 15 days,reports,should,yes,yes,S06 observed; build: S06
@@ -56,7 +56,7 @@ Issue tabs Open Closed All with counts,issues,should,yes,no,S31 observed
 Comments and replies,feed,should,yes,no,"S27 counts and ""Give Reply"""
 Photo albums,photos,should,yes,no,S30 Albums observed
 Upload photos from phone,photos,should,yes,yes,"S30 upload FAB observed; build: gallery picker, copied into app storage"
-Correct or delete attendance and GRN entries with audit trail,labour,should,partial,partial,"users complain it is missing (src 11); build: attendance can be changed or cleared; audit trail is in the schema, not the fake layer"
+Correct or delete attendance and GRN entries with audit trail,labour,should,partial,partial,"users complain it is missing (src 11); build: attendance can be changed or cleared; audit trail is in the schema, not the fake layer; backend: attendance change/clear with server audit_log; GRN not built"
 Help entry point,platform,should,yes,partial,"S05 ""Help"" observed; build: button opens a placeholder"
 Hindi translation,platform,should,yes,no,src 8; own translation
 Site profile,projects,should,yes,no,S25 observed; S35 inferred
@@ -69,7 +69,7 @@ Video capture,photos,could,yes,no,S32 video mode observed
 Drive for files and drawings,documents,could,yes,no,S25 observed; S34 inferred
 Chat (org and project),chat,could,yes,no,chat icon on S04 S05
 My Team section in reports,reports,could,yes,no,S06 part (not set up)
-Free plan with paid upgrade,billing,could,yes,no,"S04 ""(Free)""; src 9"
+Free plan with paid upgrade,billing,could,yes,partial,"S04 ""(Free)""; src 9; backend: Razorpay subscribe/cancel/webhook + 3-site free limit; plan screen not built"
 Gentle inactivity nudges,feed,could,partial,no,original raises support issues (S31): do better
 Owner web dashboard,platform,could,yes,no,src 7
 Six more Indian languages,platform,could,yes,no,src 8

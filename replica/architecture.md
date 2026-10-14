@@ -12,7 +12,7 @@ The clone stays on that stack for the phone and puts everything else on one mana
 | layer | choice | why |
 | --- | --- | --- |
 | Android app | Kotlin + Jetpack Compose, min SDK 24 | The stack already in this repo and its CI. Native camera and background work. Runs on the low-end phones site teams carry. |
-| local data / offline | Room + WorkManager | Every screen reads the local database first. Writes go to an outbox that WorkManager pushes when there is signal. |
+| local data / offline | SQLDelight (SQLite) + WorkManager | Every screen reads the local database first. Writes go to an outbox that syncs when there is signal. SQLDelight over Room: the same code runs in JVM tests (built in `/replica-backend`). |
 | backend | Supabase (Mumbai region) | Postgres, auth, storage, realtime and functions in one managed service. Row level security keeps access rules in one place. The Mumbai region keeps latency low and data in India. |
 | database | Postgres 15 on Supabase | One database. Stock, payables and expenses all reconcile in SQL. |
 | API | PostgREST (auto from the schema) + a few RPCs and Edge Functions | Most screens are CRUD on tables RLS already protects. Custom code only where a transaction or a secret is needed. |
@@ -22,12 +22,12 @@ The clone stays on that stack for the phone and puts everything else on one mana
 | email | Resend | Only receipts and report links. Most sharing goes through the Android share sheet (WhatsApp). |
 | files | Supabase Storage: buckets `project-media`, `project-drive`, `reports` | Same RLS model as the tables. Resumable (TUS) uploads for photos on weak networks. |
 | jobs | Supabase Cron (pg_cron) + Edge Functions | Nightly and hourly jobs with no extra service. |
-| PDF reports | A small worker on Fly.io (Node + headless Chromium, HTML → PDF) | Chromium shapes Devanagari, Tamil and the other Indic scripts correctly. Most PDF libraries don't. |
+| PDF reports | On the phone (Android PdfDocument + StaticLayout), uploaded to Storage | Android's text engine shapes Indian scripts correctly, works offline, and needs no extra server. Replaced the planned Fly.io Chromium worker in `/replica-backend`. |
 | web dashboard (phase 3) | Next.js + TypeScript on Vercel, same Supabase | For owners at a desk. Not needed for the core loop. |
-| Android libraries | supabase-kt (Ktor), kotlinx.serialization, Hilt, CameraX, Coil, Room, WorkManager | All official or de facto standard. |
+| Android libraries | Ktor (plain HTTP to Supabase), kotlinx.serialization, SQLDelight, Coil, WorkManager | All official or de facto standard. Manual DI in `AppContainer`. |
 
-Repo layout (created during `/replica-build`): `site-app/` (Android), `supabase/` (migrations, tests, functions),
-`report-worker/` (PDF), with a new GitHub Actions workflow for `site-app/`. Trapline's `trapline.zip` and
+Repo layout: `site-app/` (Android: `core` pure Kotlin + `app`), `supabase/` (migrations, tests, functions), with GitHub
+Actions workflows `site-app.yml` and `backend.yml`. Backend details and setup: `replica/backend.md`. Trapline's `trapline.zip` and
 `build.yml` stay untouched.
 
 ## Schema
@@ -186,7 +186,6 @@ Routes: **58** (rows above, counting a GET/POST pair as one).
 
 | job | schedule | does |
 | --- | --- | --- |
-| render-report | on insert into `reports` (database webhook), plus a sweep every 5 min for `queued` older than 2 min | worker renders the HTML → PDF in the report's language, uploads to `reports/`, sets `ready` |
 | push-fanout | on insert into `activity_events` and `notifications` | FCM to the right members (assignee, managers) |
 | daily-nudge | 18:30 IST | projects with no update today: one push to managers. Replaces the original's support-raised "inactivity" issues (S31). |
 | delayed-tasks | 06:00 IST | notifications for tasks past their due date and not completed |
@@ -199,7 +198,7 @@ Never Powerplay's endpoints.
 
 ## Offline sync (the core of the app)
 
-- **Writes:** the app writes to Room and to an `outbox` table in the same transaction. WorkManager drains the outbox in order
+- **Writes:** the app writes to its SQLite database and to an `outbox` table in the same transaction. WorkManager drains the outbox in order
   (headers before lines) whenever there is a network. Every row has a client-generated UUID, so retries are safe upserts.
 - **Reads:** per table, pull `updated_at > cursor − 2 min`. The overlap covers transactions that commit out of order.
   Rows are upserted locally, then tombstones are applied.
@@ -224,11 +223,11 @@ Never Powerplay's endpoints.
   days, so start it early.
 - **File sizes:** photos ≤ ~500 KB after compression. Videos are capped at 100 MB and 60 s. Drive files are capped at 100 MB.
   Free-plan storage quota per org enforced in the upload function.
-- **Search:** tasks by number or name via `ilike` + `pg_trgm` index if lists get long. Search on the phone is a local query in Room.
+- **Search:** tasks by number or name via `ilike` + `pg_trgm` index if lists get long. Search on the phone is a local SQLite query.
 - **Realtime:** chat only (Supabase Realtime with RLS). No live cursors.
 - **Offline:** see above. Sign in and accepting an invite need a network. Everything after that works without one.
 - **Low-end phones:** Compose lists with stable keys, Coil thumbnails, no full-size images in memory, and an APK size budget.
-- **Reports in Indic scripts:** render with Chromium and bundled Noto Sans fonts per script. Test every language with real
+- **Reports in Indic scripts:** rendered on the phone by Android's text engine (system Noto fonts). Test every language with real
   data before calling a language done.
 - **Multi-tenancy:** every table carries `org_id` or `project_id`, and every policy goes through `app.*` helpers.
   The smoke test proves an outsider sees nothing.
@@ -272,7 +271,7 @@ The smoke test creates an owner, an invited engineer and an outsider. It then ch
      media, workers, attendance, reports, activity_events.
    - **Routes:** auth OTP, create_organisation, projects, tasks, task_updates, storage upload, media, workers, attendance,
      reports + render-report job.
-   - **Proves:** OTP, RLS, offline outbox and pull, photo upload on a bad network, and the PDF worker with Hindi.
+   - **Proves:** OTP, RLS, offline outbox and pull, photo upload on a bad network, and the on-device PDF with Hindi.
 2. **Must-haves** (33 in features.csv), by area:
    - **Team:** invites + accept_invites, members, roles (S36), profile (S28).
    - **Material:** materials, stock_adjustments, stock_balances (S15, S16), Site GRN (S14), issue to task (S19).

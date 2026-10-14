@@ -1,0 +1,6 @@
+# secrets: real values live in your shell, ~/.gradle/gradle.properties, or Supabase function secrets
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/

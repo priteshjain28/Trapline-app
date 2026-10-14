@@ -1,0 +1,47 @@
+name: Backend
+
+on:
+  push:
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrations, smoke test, server rules, seed
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: supabase/run-tests.sh
+
+  functions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.6
+      - name: Unit tests
+        working-directory: supabase/functions
+        run: deno test _shared/
+      - name: Type-check every function
+        working-directory: supabase/functions
+        run: deno check */index.ts
