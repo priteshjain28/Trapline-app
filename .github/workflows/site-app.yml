@@ -38,6 +38,9 @@ jobs:
         with:
           gradle-version: '8.14.3'
 
+      - name: No duplicate strings (Android only finds them at resource merge)
+        run: python3 site-app/check_strings.py
+
       - name: Core tests (models, data layer, wages, reports)
         run: gradle :core:test --no-daemon --stacktrace
 

@@ -189,7 +189,7 @@ fun NewIssueScreen(projectId: String, onBack: () -> Unit, onCreated: (String) ->
                 stringResource(R.string.field_issue_task_none), { picking = "task" })
             PickerField(stringResource(R.string.field_assignee), members.firstOrNull { it.userId == assignee }?.name,
                 stringResource(R.string.field_assignee_none), { picking = "person" })
-            DateField(stringResource(R.string.field_due), due, { due = it }, placeholder = stringResource(R.string.field_date_optional),
+            DateField(stringResource(R.string.field_fix_by), due, { due = it }, placeholder = stringResource(R.string.field_date_optional),
                 onClear = { due = null })
         }
     }

@@ -458,7 +458,7 @@
     <string name="field_issue_task_none">None</string>
     <string name="field_assignee">Who fixes it</string>
     <string name="field_assignee_none">Not assigned</string>
-    <string name="field_due">Fix by</string>
+    <string name="field_fix_by">Fix by</string>
     <string name="issue_status_open">Open</string>
     <string name="issue_status_closed">Closed</string>
     <string name="issue_overdue">Overdue</string>
