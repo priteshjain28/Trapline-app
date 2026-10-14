@@ -1,258 +1,335 @@
 # Recon map: Powerplay Site Management App (Android, plus iOS and a web dashboard)
 
-Scope: everything the public sources describe. That is projects and tasks, daily progress
-reports with photos, labour attendance and payroll, materials (request, purchase
-order, GRN, stock, transfers), petty cash and expenses, subcontractor billing,
-documents, quality checks, roles and reports. It is phased in "Size" below, because
-the whole thing is XL.
+Scope: everything. That covers projects and tasks, reports, materials (indent, PO and deliveries,
+GRN, stock, transfers, issue, returns), labour attendance and payables, expenses, issues,
+feed and chat, gallery and drive, members and settings. It is phased in "Size" below.
 For: a product to sell to small and medium Indian builders and contractors, the same market as Powerplay.
-Date: 2026-10-14
+Date: 2026-10-14 (pass 2: 26 screenshots from the user's own account)
 
-## How this map was made, and its limits
+## How this map was made
 
-Public sources only, read through web search. This container's network policy
-blocks direct fetches of play.google.com, apps.apple.com, getpowerplay.in and
-capterra.com. As a result:
-
-- **No screenshots yet.** `replica/screens/` is empty. Screens, routes and states
-  below are **inferred** from feature descriptions and how apps in this category
-  usually work. They were not observed. Every screen row says so.
-- **No account walkthrough.** Nobody drove a real Powerplay account. If you have
-  your own account, check Powerplay's terms first. Many SaaS terms forbid using an
-  account to build a competing product. If yours do, stay on public sources only.
-- **Next pass:** open the Play Store listing on your phone, save its screenshots into
-  `replica/screens/` as `S03-projects.png` and so on, and re-run `/replica-recon`
-  to replace the inferred rows with observed ones.
+- **Pass 1:** public sources through web search. The container's network blocks the store and vendor sites.
+- **Pass 2:** 26 screenshots the user took of **their own Powerplay account** (free plan, one
+  near-empty project). They are in `replica/screens/`, named by screen ID. Screens marked
+  **observed** come from them. Screens marked **inferred** have not been seen yet.
+- **Terms:** the screenshots come from the user's own account. Check Powerplay's terms of
+  service for a clause against using the product to build a competitor. If there is one,
+  stop using the account and work from public sources only.
+- **Still unseen** (the next screenshots to take): sign in, create project, task create and
+  detail, indent form, PO form, GRN form, add worker and marking attendance with workers present,
+  payable review, a generated report, chat, drive, site profile, members, labour shift, issue
+  detail, expense entry. Screens with real data in them help most.
 
 ## Sources
 
 | # | source | URL | notes |
 | --- | --- | --- | --- |
-| 1 | Play Store listing | https://play.google.com/store/apps/details?id=in.powerplay.android.fieldapp | "#1 Construction Management App for small & medium construction businesses & contractors". Lists daily log, photos, tasks, labour and materials, and "Generate Daily Progress Reports in just a few minutes". Read via search snippets only. |
-| 2 | App Store listing | https://apps.apple.com/in/app/powerplay-manage-projects/id1552606148 | Developer Coffer Internet Services Pvt Ltd. Free, no in-app purchases (selling is B2B). Labour attendance "across office & site teams". Material "requests and movement". |
-| 3 | Marketing site, home | https://www.getpowerplay.in/ | Modules: Project/Work Mgmt, material stock on site, POs and GRNs, labour, petty cash. |
-| 4 | Labour & payroll page | https://www.getpowerplay.in/features/labour-payroll-management/ | Real-time attendance, overtime from work hours, integrated payroll, task allocation. |
-| 5 | Labour page | https://www.getpowerplay.in/labour-management/ | Attendance, overtime, wages, advances. |
-| 6 | Project/work page | https://www.getpowerplay.in/features/project-work-management/ | Progress tracking, DPRs, timelines. |
-| 7 | Owner page | https://www.getpowerplay.in/owner/ | Multi-project dashboard. Vendor payments, wages and expenses in real time. Admin-defined permissions. |
-| 8 | Generic landing | https://www.getpowerplay.in/generic/ | 8 languages: English, Hindi, Tamil, Odia, Telugu, Bengali, Malayalam, Kannada. Daily and weekly reports "in just a click". |
-| 9 | Capterra pricing | https://www.capterra.com/p/268357/Powerplay/pricing/ | Pro ₹71,999/yr, Pro+ ₹1,19,999/yr, Advanced custom quote. Directory data, unverified. |
-| 10 | Capterra India reviews | https://www.capterra.in/software/1036292/powerplay | Reviewers mention GRN, indents and purchase formats. Site-office communication praised. |
-| 11 | SoftwareAdvice reviews | https://www.softwareadvice.co.uk/software/390766/powerplay | 4.5/5 (8 reviews). Complaint: "delete option is not available in attendance & grn report". |
-| 12 | Software Finder | https://softwarefinder.com/construction/powerplay | Lists POs, subcontractor management, document management, quality control. |
-| 13 | Onsite comparison | https://onsiteteams.com/resources/feature-comparisons/powerplay-vs-onsite/ | Competitor-written. Says BOQ is weak, billing and cost tracking exist, retention isn't detailed, expense tracking exists. |
-| 14 | SiteSetu comparison | https://sitesetu.app/blog/powerplay-alternative-india | Competitor-written. Calls offline-first a gap to look for. Powerplay's offline support is unverified. |
+| 0 | **User's own account, 26 screenshots** | `replica/screens/` | Free plan, organisation "My Organisation", project "palak". Taken 2026-10-13. |
+| 1 | Play Store listing | https://play.google.com/store/apps/details?id=in.powerplay.android.fieldapp | "#1 Construction Management App for small & medium construction businesses & contractors". DPR "in just a few minutes". |
+| 2 | App Store listing | https://apps.apple.com/in/app/powerplay-manage-projects/id1552606148 | Coffer Internet Services Pvt Ltd. Free download. |
+| 3 | Marketing site | https://www.getpowerplay.in/ | Modules: project/work, material, POs and GRNs, labour, petty cash. |
+| 4 | Labour & payroll page | https://www.getpowerplay.in/features/labour-payroll-management/ | Attendance, overtime, payroll. |
+| 5 | Labour page | https://www.getpowerplay.in/labour-management/ | Wages, advances. |
+| 6 | Project/work page | https://www.getpowerplay.in/features/project-work-management/ | Progress, DPRs, timelines. |
+| 7 | Owner page | https://www.getpowerplay.in/owner/ | Multi-project view, admin-defined permissions. |
+| 8 | Generic landing | https://www.getpowerplay.in/generic/ | 8 languages. |
+| 9 | Capterra pricing | https://www.capterra.com/p/268357/Powerplay/pricing/ | Pro ₹71,999/yr, Pro+ ₹1,19,999/yr, Advanced custom. The screenshots also confirm a **Free** plan. |
+| 10 | Capterra India reviews | https://www.capterra.in/software/1036292/powerplay | GRN, indents. |
+| 11 | SoftwareAdvice reviews | https://www.softwareadvice.co.uk/software/390766/powerplay | "delete option is not available in attendance & grn report". |
+| 12 | Software Finder | https://softwarefinder.com/construction/powerplay | POs, subcontractor and document management. |
+| 13 | Onsite comparison | https://onsiteteams.com/resources/feature-comparisons/powerplay-vs-onsite/ | Competitor-written. |
+| 14 | SiteSetu comparison | https://sitesetu.app/blog/powerplay-alternative-india | Competitor-written. Offline support unverified. |
 
 ## Core loop
 
-The site engineer logs today's work on a phone (progress, photos, labour present,
-material received or used), and the owner sees every site in one report without
+The site team logs the day on a phone: task progress, photos, labour attendance, and material
+in and out. The owner builds one report for any date range and shares it, without
 calling anyone.
+
+## App structure (observed)
+
+```
+Org home (S04): org switcher + plan badge, chat, profile
+  └─ Project (S05 shell): header "Org / Project ⇕" switcher, chat, Help
+       bottom tabs: Report | Task | Material | Attendance | More
+         Report     S06 report builder, S07 generated reports
+         Task       S08 task list
+         Material   segmented: Procurement [Indent | Deliveries | Site GRN]
+                               Inventory   [Material list | Transfer Order | Transfer Requests | Material Issue | Material Returns]
+         Attendance tabs: Labour Attendance | Payables
+         More       Financials: Expenses
+                    Others: Issues, Feed, Report, Gallery, Drive, Camera
+                    Settings: Site Profile, Labour Shift, Members (n)
+```
 
 ## Screens
 
-All rows are **inferred** (see the limits above). The states listed are the ones to
-build, not ones that were observed.
+| ID | screen | route / how to reach | purpose | key components | states | seen |
+| --- | --- | --- | --- | --- | --- | --- |
+| S01 | Sign in | launch | phone + OTP (the profile shows a verified +91 phone) | phone input, OTP | empty, sending, wrong OTP | inferred |
+| S02 | Language picker | first launch | 1 of 8 languages | list | default | inferred (src 8) |
+| S03 | Create project | S04 "Create New" | name, image, dates, status | form, date range | empty, error | inferred |
+| S04 | Projects list (org home) | after sign in | all projects in the organisation | navy header: org avatar + name + plan badge "(Free)", chat icon, user avatar; "Projects" + "⊕ Create New"; search; project card: image placeholder, name, status pill "Active", progress ring "0%", "Start Date - End Date", ⋮ menu | filled (1 project); card without dates or image | **observed** |
+| S05 | Project shell | tap a project | container for the 5 tabs | ✕ close, "My Organisation" over "palak ⇕" (project switcher), chat icon, "Help" outline button, bottom nav of 5 tabs | — | **observed** |
+| S06 | Report builder (Report tab) | Report tab | build a report for a date range | "Generate a new Report"; type cards: **Detailed Report** (day-wise logs) / **Summary Report** (NEW badge); duration radios Today / 7 days / 15 days / Specific Date; From/To date fields; collapsible "Parts in the Report" checklist (below); sticky "Create Report" | default; a part disabled ("My Team: Not yet set up on this project") | **observed** |
+| S07 | Generated reports | More > Report | list of past reports | info banner: "You will be able to access generated reports for up to 15 days from their creation date"; empty state + "Create Report" | empty | **observed** |
+| S08 | Task list | Task tab | tasks for the project | "Search by id, name"; "List View ▾" view switcher; filter button; chips **In Progress / Task with Work order / Delayed / Task with Open Issues**; empty state "Get organised by creating and updating your 1st task!"; FAB + | empty | **observed** |
+| S09 | Task detail / update progress | S08 row, Feed "Update Task Progress" | progress, photos, remarks; task category in brackets, e.g. "brick work (General)" | — | — | inferred |
+| S10 | Create task | S08 FAB | name, category, qty/unit, dates, assignee, work order link | — | — | inferred |
+| S11 | Indent form | S12 "New Indent" | request materials | — | — | inferred |
+| S12 | Indents | Material > Procurement > Indent | list of material requests | warehouse illustration, "You don't have any Indents", "+ New Indent" | empty | **observed** |
+| S13 | Deliveries | Procurement > Deliveries | purchase orders and their upcoming deliveries | "You don't have any upcoming deliveries", "+ Create Purchase Order" | empty | **observed** |
+| S14 | Site GRN | Procurement > Site GRN | goods received on site | illustration, "Get Started! Create your first GRN", "+ Create First GRN" | empty | **observed** |
+| S15 | Material list (stock) | Material > Inventory > Material list | stock on site | search, filter; coach-mark "Switch between project and subcontractor inventories"; "In: Project Inventory ⇕"; row: name "cement", spec/brand "acc", "UOM: pk", "In stock: 5 pk", "+ Update"; FAB "+ Add Material" | filled | **observed** |
+| S16 | Update stock / add material | S15 "Update" / "Add Material" | add or adjust stock | — | — | inferred |
+| S17 | Transfer orders | Inventory > Transfer Order | stock sent to another project | wheelbarrow illustration, "No transfer Orders found", "+ New Transfer" | empty | **observed** |
+| S18 | Transfer requests | Inventory > Transfer Requests | ask another project for stock | "No transfer Request found", "+ Request a transfer" | empty | **observed** |
+| S19 | Material issue | Inventory > Material Issue | issue material to a task or subcontractor | "You haven't issued any material for tasks", "+ Issue Material" | empty | **observed** |
+| S20 | Material returns | Inventory > Material Returns | material back into stock | "No Record found", "+ Create Material Return" | empty | **observed** |
+| S21 | Labour attendance | Attendance > Labour Attendance | mark the day's attendance per worker | search; date stepper "‹ Mon, 12 Oct 2026 ›"; "Labour on site: 0" outline button; filter; FAB "+ Add Worker" | **error seen: raw backend message `"end_date" must be greater than ref:start_date` + "Tap to retry"** | **observed** |
+| S22 | Add worker | S21 FAB | name, type/skill, wage, contractor | — | — | inferred |
+| S23 | Payables | Attendance > Payables | wages due from attendance | "₹ Total Due amount ₹0 ›" bar; search; date range "12 Sep - 12 Oct 2026"; "Filters"; "No Entries"; FAB "+ Review & Record Payable" | empty | **observed** |
+| S24 | Attendance settings | More > Labour Shift | attendance options | toggle **Work Updates**: "Add remarks on each attendance record"; **Labour hourly shift** "Record hourly attendance or shifts" = "8 hours" › ; toast "✓ Update Successful" | default, saved | **observed** |
+| S25 | More menu | More tab | everything else | icon grid in 3 groups: **Financials**: Expenses. **Others**: Issues, Feed, Report, Gallery, Drive, Camera. **Settings**: Site Profile, Labour Shift, Members (1) | — | **observed** |
+| S26 | Expenses | More > Expenses | where the project's money went | Filter; banner "Learn what's included in expenses ›"; donut "Total Expense ₹0"; 6 colour-keyed tiles: **Material, Subcontractor, Attendance, Petty Spend, Miscellaneous, Assets**; "Records" list | empty | **observed** |
+| S27 | Feed | More > Feed | project activity stream | cards: actor avatar + "X raised an issue / created a task", relative time ("3 years ago"), body, action button ("Give Reply" filled, "Update Task Progress" outline), comment count; system lines ("Pritesh Jain joined as Manager", "Pritesh Jain created palak") | filled | **observed** |
+| S28 | Profile | org home avatar | user profile | big initials avatar; rows: Name, Role "Organization Management Team", Email "Add email id +", Phone number ✓ verified; ⋮ menu | filled, no email | **observed** |
+| S29 | Organisation settings | org header | org name and logo | logo upload circle with + badge, "Organisation Name*", "Save" | filled | **observed** |
+| S30 | Gallery | More > Gallery | project photos | tabs **Media / Albums**; "No Photos. Photos clicked from camera will appear here"; FAB upload (Media), FAB new album (Albums) | empty | **observed** |
+| S31 | Issues | More > Issues | problems on site to track and close | search, filter; tabs Open (1) / Closed / All (1); row: text, Due Date, Assignee, Status pill "Open"; FAB "+ Create Issue". **Seen: an issue auto-raised by "Powerplay Support" for an inactive project.** | filled | **observed** |
+| S32 | Camera | More > Camera | in-app capture straight into the project | ✕, flash toggle, photo/video mode pill, gallery picker, shutter, flip camera | live | **observed** |
+| S33 | Chat | header chat icon (org and project) | team messaging | — | — | inferred |
+| S34 | Drive | More > Drive | project files and drawings | — | — | inferred |
+| S35 | Site profile | More > Site Profile | project details (address, dates, image) | — | — | inferred |
+| S36 | Members | More > Members (n) | invite people, set roles | roles seen: "Manager", "Organization Management Team" | — | inferred |
+| S37 | Help | header "Help" | help and support | — | — | inferred |
+| S38 | Owner web dashboard | web | all projects at once | — | — | inferred (src 7) |
 
-| ID | screen | route / how to reach | purpose | key components | states to build |
-| --- | --- | --- | --- | --- | --- |
-| S01 | Language picker | first launch | choose 1 of 8 languages | language list | default |
-| S02 | Sign in | after S01 | phone number + OTP (guess: the Indian SMB norm) | phone input, OTP input | empty, sending, wrong OTP, expired |
-| S03 | Create company / join | first sign in | create a company, or accept an invite | form, invite card | empty, invited |
-| S04 | Projects list (home) | after sign in | all projects the user can see | project cards (progress %, today's labour, alerts), FAB | empty, filled, loading, offline |
-| S05 | Create / edit project | S04 FAB | name, location, start/end dates, budget | form, date picker, map pin | empty, validation error |
-| S06 | Project dashboard | tap a project | today at a glance: progress, labour, materials, cash | stat tiles, tab bar (Tasks, Labour, Material, Money, More) | filled, no data today |
-| S07 | Members & roles | S06 > More | invite people, set role and project access | member list, role picker | empty, pending invite, permission denied |
-| S08 | Tasks list | S06 Tasks tab | work items with status and deadline | filter chips, task rows, progress bars | empty, filled, overdue |
-| S09 | Task detail | S08 row | progress %, quantity done vs planned, photos, comments, assignee | progress slider, photo grid, comment thread | not started, in progress, done, blocked |
-| S10 | Add progress update | S09 / S06 quick action | log work done today with photos | quantity input, camera, note | draft, uploading, offline queued, failed |
-| S11 | Daily progress report | S06 > Reports | auto-built DPR for a date: work, labour, material, photos, issues | date picker, sections, Share/PDF | generating, ready, empty day |
-| S12 | Attendance register | S06 Labour tab | mark present/absent/half-day/OT per worker for a date | worker rows, status toggles, bulk "all present" | empty, filled, locked (past date) |
-| S13 | Worker / labour contractor | S12 > add | worker name, skill, daily wage, contractor | form | empty, validation error |
-| S14 | Payroll & advances | S06 Labour > Payroll | wages due per worker or contractor for a period, minus advances | period picker, totals, Pay / Add advance | nothing due, due, paid |
-| S15 | Site stock | S06 Material tab | materials on site: in, used, balance | material rows, low-stock flag | empty, filled, low stock |
-| S16 | Material request (indent) | S15 > Request | ask for materials with qty and needed-by date | item picker, qty, date | draft, submitted |
-| S17 | Requests & approvals | S15 > Requests | approve, reject or convert requests to POs | status tabs, approve/reject | pending, approved, rejected, empty |
-| S18 | Purchase order | S17 > Create PO | PO to a vendor with lines, rates, tax; shared as a PDF | vendor picker, line items, totals, PDF | draft, sent, partly received, closed |
-| S19 | GRN (material received) | S18 / S15 > Receive | record delivery against a PO, with challan photo | qty received vs ordered, photo | full, partial, excess |
-| S20 | Material issue / transfer | S15 > Use / Transfer | log consumption, or move stock to another site | qty, destination project | done, insufficient stock |
-| S21 | Vendors | More > Vendors | supplier list with what's owed | vendor rows, balance | empty, filled |
-| S22 | Petty cash & expenses | S06 Money tab | site cash given and spent, by category, with bill photos | balance card, expense rows, add form | empty, filled, negative balance |
-| S23 | Subcontractor work orders & bills | Money > Subcontractors | work order scope and rates; bills against measured work | WO form, bill lines, retention/advance | draft, approved, paid |
-| S24 | Documents & drawings | More > Documents | folders of drawings and files, with permissions | folder tree, file viewer, upload | empty, uploading, no access |
-| S25 | Quality checklists | More > Quality | inspection checklists against tasks, with pass/fail and photos | checklist, pass/fail, photo | open, passed, failed |
-| S26 | Reports hub | More > Reports | DPR, attendance, material, expense and labour reports; PDF/Excel export | report list, filters, export | generating, ready |
-| S27 | Activity & notifications | bell icon | approvals waiting, updates from site | feed rows | empty, unread |
-| S28 | Settings | profile | company, language, units, expense categories, material catalogue | lists, toggles | default |
-| S29 | Owner web dashboard | web | every project at once: progress, spend, labour, alerts | table, charts, filters | empty, filled |
+### Report builder parts (S06, observed)
+
+```
+[x] Task Updates     task progress, attendance & remarks
+[x] Photos           all photos
+[x] Issues           all issues
+[x] Inventory        used, added & in stock materials
+[x] Material         used, added & in stock materials
+      [x] Indent  [x] GRN  [x] Material Issue  [x] Transfer Order  [x] Purchase Order  [x] Consumptions
+[x] Attendance       attendance and payable records
+      [x] Attendance Record (locked on)  [x] Attendance Payable (payables overlapping the duration)
+[ ] My Team          disabled: "Not yet set up on this project"
+[x] Payables
+      [x] Purchase Order  [x] GRN  [x] Attendance  [x] Work Order  [x] Custom
+```
 
 ## Flows
 
 ```
 F01 Site engineer logs the day
-    S04 -> S06 -> S10 (progress + photos) -> S12 (attendance) -> S19/S20 (material in/used) -> S11 (DPR share)
-    happy path clicks: ~12, target to beat: 8
-    edge: no network on site, photo upload fails halfway, worker added mid-day, back-dated entry
+    S04 -> S05 -> S08 -> S09 (progress + photos via S32) -> S21 (attendance, remarks) -> S14/S19 (GRN / issue)
+    happy path clicks: unknown until S09/S21 are seen with data; target ≤ 8
+    edge: no network, photo upload fails, back-dated entry, attendance API error (seen in S21)
 
-F02 Owner checks all sites
-    S29 (or S04) -> S06 -> S11
-    happy path clicks: 2-3
-    edge: no update from a site today, too many projects to scan
+F02 Owner gets a report
+    S04 -> S05 (Report tab = S06) -> pick type + duration -> Create Report -> S07 -> share
+    happy path clicks: 3 with defaults (all parts ticked, Today)
+    edge: a part not set up (My Team), long range, report expires after 15 days
 
-F03 Material request to delivery
-    S16 -> S17 (approve) -> S18 (PO, share PDF) -> S19 (GRN, partial) -> S15 (stock updates)
-    happy path clicks: ~10
-    edge: partial delivery, wrong item, price changed, request rejected, PO cancelled
+F03 Material: indent to stock
+    S12 New Indent -> (approve?) -> S13 Create Purchase Order -> delivery -> S14 GRN -> S15 stock up
+    edge: partial delivery, GRN without PO ("Site GRN"), delete a wrong GRN (users ask for it, src 11)
 
-F04 Mark attendance and pay labour
-    S12 (mark day) -> ... -> S14 (period wages - advances) -> mark paid
-    happy path clicks: 3 per day, 3 per payout
-    edge: half day, overtime hours, worker moves sites, advance bigger than wages, past day edited
+F04 Material: move and use
+    S15 -> S19 issue to task / subcontractor -> S20 return leftovers
+    S18 request transfer -> other project's S17 transfer order -> stock moves
+    edge: issue more than in stock, project vs subcontractor inventory (S15 switch)
 
-F05 Spend petty cash
-    S22 -> add expense (amount, category, bill photo) -> balance updates
-    happy path clicks: 4
-    edge: cash goes negative, expense without a bill, wrong project
+F05 Attendance and payables
+    S21 Add Worker (S22) -> mark day -> hourly/shift per S24 -> S23 Review & Record Payable -> total due
+    edge: hourly vs 8-hour shift, remarks per record, payable periods overlapping the range
 
-F06 Subcontractor bill
-    S23 work order -> measure work done -> bill -> approve -> pay
-    edge: retention held back, advance recovery, a disputed quantity
+F06 Expenses
+    S26 totals by Material / Subcontractor / Attendance / Petty Spend / Misc / Assets -> Records
+    edge: totals that include POs, GRNs, payables and work orders. Which records count where? (banner explains)
 
-F07 Plan and track tasks
-    S08 -> create task (qty, unit, dates, assignee) -> S09 updates -> overdue alert
-    edge: task blocked, dates slip, task reassigned
+F07 Issues
+    S31 Create Issue (due date, assignee) -> Feed card -> reply -> close
+    edge: auto-raised inactivity issue, issue linked to a task (S08 chip "Task with Open Issues")
 
-F08 Invite the team
-    S07 -> phone number + role + projects -> invitee signs in (S02) -> lands in S04 with only their projects
-    edge: invite to a number already in another company, role downgrade, user removed
+F08 Feed and chat
+    S27 cards with inline actions (Give Reply, Update Task Progress), comment counts; S33 chat
 
-F09 Quality inspection
-    S25 -> pick checklist for a task -> pass/fail items with photos -> failed items raise a task
-    edge: re-inspection, inspector without permission
+F09 Photos
+    S32 camera (photo/video) -> S30 Media; albums to group them; upload from the phone
 
-F10 Share and export reports
-    S26 -> choose report + date range -> PDF/Excel -> share via the system share sheet (WhatsApp, email)
-    edge: very large date range, report in a regional language
+F10 Team and settings
+    S36 invite member + role -> they see the project; S35 site profile; S24 attendance settings; S29 org; S28 profile
 ```
 
-## Components
+## Components (observed unless noted)
 
 | component | variants | states | used on |
 | --- | --- | --- | --- |
-| Button | primary, secondary, text, danger, FAB | default, pressed, disabled, loading | all |
-| Text / number input | text, phone, OTP, quantity+unit, currency (₹, Indian digit grouping) | empty, focused, error, disabled | S02, S05, S10, S13, S16, S18, S22 |
-| Date picker | single, range | default, disabled past/future | S05, S11, S14, S16, S26 |
-| Project card | — | progress, alert badge | S04 |
-| Stat tile | count, money, % | normal, warning | S06, S29 |
-| List row | task, worker, material, expense, vendor, member | default, selected, swipe actions | most |
-| Status chip | draft, pending, approved, rejected, partial, done, overdue | — | S08, S17, S18, S19, S23 |
-| Attendance toggle | P / A / ½ / OT | per state | S12 |
-| Progress bar / slider | read-only, editable | 0–100% | S04, S08, S09, S10 |
-| Photo grid + camera | capture, gallery, viewer | uploading, failed, queued offline | S09, S10, S19, S22, S25 |
-| Line-item editor | PO line, bill line, request line | add, edit, remove | S16, S18, S23 |
-| Bottom tab bar | project tabs | active | S06 |
-| Filter chips | status, date, assignee | on/off | S08, S17, S26 |
-| Comment thread | — | empty, sending | S09 |
-| Empty state | per screen | — | all lists |
-| Offline banner / sync badge | — | offline, syncing, failed | global |
-| PDF preview + share | — | generating, ready | S11, S18, S26 |
-| Role picker | — | — | S07 |
-| Toast / snackbar | success, error, undo | — | global |
+| Primary button | full-width ("Create Report", "Save"); pill FAB with icon + label ("+ Add Worker", "+ Add Material", "+ Create Issue", "+ Review & Record Payable"); square FAB "+"; round FAB icon (upload, new album) | default | most |
+| Outline button | "Help", "Labour on site: n", "Update Task Progress", "Filters" | default | S05, S21, S27, S23 |
+| Text link with + | "⊕ Create New", "+ Update", "Add email id +" | — | S04, S15, S28 |
+| App header (org) | navy bar: org avatar initials, org name + plan badge, chat icon, user avatar | — | S04 |
+| App header (project) | ✕, org name over project name with ⇕ switcher, chat icon, Help | — | S05 tabs |
+| App header (sub-page) | ← back, small project name over the page title, optional right action (Filter) | — | S24, S26, S27, S31 |
+| Bottom nav | 5 items, icon + label, filled icon when active | active/inactive | S05 |
+| Segmented control | 2 options (Procurement / Inventory) | selected | Material |
+| Tab strip | scrollable, underline indicator | selected | Material, Attendance, Gallery, Issues (with counts) |
+| Search field | with leading icon; placeholder varies ("Search by id, name") | empty | S04, S08, S15, S21, S23, S31 |
+| Filter button | icon-only square; "Filter"/"Filters" labelled | — | S08, S15, S21, S23, S26, S31 |
+| Filter chips | horizontal scroll, outline | on/off | S08 |
+| Date stepper | ‹ date › | — | S21 |
+| Date field | label with red *, date + calendar icon | — | S06 |
+| Date range button | calendar icon + "12 Sep - 12 Oct 2026" | — | S23 |
+| Radio group | horizontal, scrolls off-screen | — | S06 |
+| Selectable card | title + description, optional "NEW" badge | selected (tinted + blue border) | S06 |
+| Checkbox tree | parent with description, indented children with guide line | checked, disabled-checked, disabled-unchecked with reason | S06 |
+| Toggle | — | on | S24 |
+| Value pill | "8 hours" | — | S24 |
+| Status pill | Active / Open (amber tint) | — | S04, S31 |
+| Progress ring | small ring + % | 0% | S04 |
+| Project card | image, name, status, progress, date range, ⋮ | — | S04 |
+| Stock row | name, spec, UOM, in-stock, "+ Update" | — | S15 |
+| Stat tile | coloured left border, label + ₹ amount | — | S26 |
+| Donut total | ring with label + amount | empty grey | S26 |
+| Feed card | avatar, actor + verb, time, body, action button, comment count | — | S27 |
+| Feed system line | centred grey text | — | S27 |
+| Info banner | light blue, info icon, text, optional › or ✕ | dismissible | S07, S15, S26 |
+| Coach-mark | banner with pointer and ✕ | — | S15 |
+| Empty state | illustration (warehouse, wheelbarrow, worker, folder, magnifier) + line + primary button | — | most lists |
+| Error state | ! icon, message, "Tap to retry" | — | S21 |
+| Toast | green, ✓ "Update Successful" | success | S24 |
+| Avatar | initials on tinted square/circle (navy, peach) | — | S04, S27, S28 |
+| Camera | shutter, flip, flash, gallery, photo/video | — | S32 |
+
+Make your own illustrations and icons. Never reuse theirs (see Out of scope).
 
 ## Inferred data model
 
 ```
-Company      id, name, plan, language_default, created_at
-             evidence: B2B pricing per company (src 9), admin-defined permissions (src 7)
-             confidence: high
-User         id, phone, name, language
-             evidence: phone-first market (guess), 8 languages (src 8)
-             confidence: medium
-Membership   company_id, user_id, role (owner | admin | site_engineer | purchase | accounts | viewer), project_ids[]
-             evidence: "access permissions defined by the project admin" (src 7)
-             confidence: medium. Role names are a guess.
-Project      id, company_id, name, location, start_date, end_date, budget, status
-             evidence: multi-project dashboard (src 3, 7)
-             confidence: high
-Task         id, project_id, name, unit, planned_qty, done_qty, start, due, assignee_id, status, parent_id
-             evidence: task management, timelines (src 1, 6)
-             confidence: high for the entity, guess for quantity-based progress
-ProgressUpdate id, task_id, user_id, date, qty, note, photo_ids[]
-             evidence: daily log + photos (src 1)
-             confidence: high
-Photo        id, project_id, url, taken_at, lat, lng, uploaded_by
-             confidence: high for the entity, guess for geotagging
-DailyReport  project_id, date, generated_pdf_url (derived from the day's records)
-             evidence: "DPR in a few minutes" (src 1)
-             confidence: high
-Worker       id, company_id, name, skill, daily_wage, ot_rate, contractor_id?
-LabourContractor id, company_id, name, phone
-AttendanceEntry worker_id, project_id, date, status (P | A | HALF), ot_hours
-WagePayment  worker_id | contractor_id, period, amount, paid_at
-Advance      worker_id, amount, date, recovered_amount
-             evidence: attendance, overtime, wages, advances (src 4, 5)
-             confidence: high for attendance and OT, medium for payment modelling
-Material     id, company_id, name, unit, category
-Stock        project_id, material_id, qty (derived from in - out ± transfers)
-MaterialRequest id, project_id, requested_by, needed_by, status, lines[material_id, qty]
-Vendor       id, company_id, name, phone, gstin
-PurchaseOrder id, vendor_id, project_id, request_id?, status, lines[material_id, qty, rate, tax], total
-GRN          id, po_id?, project_id, received_at, challan_photo_id, lines[material_id, qty]
-MaterialIssue id, project_id, material_id, qty, task_id?, date
-Transfer     id, from_project_id, to_project_id, lines[material_id, qty]
-             evidence: requests, POs, GRNs, indents, stock, movement (src 2, 3, 10)
-             confidence: high for request/PO/GRN, medium for issue/transfer
-PettyCashLedger project_id, entries[type in|out, amount, category_id, note, bill_photo_id, date]
-ExpenseCategory id, company_id, name
-             evidence: petty cash module with categories (src 3)
-             confidence: high
-WorkOrder    id, project_id, subcontractor_id, lines[item, unit, rate, qty], retention_pct
-SubconBill   id, work_order_id, lines[item, qty_done], deductions, status
-             evidence: subcontractor mgmt and billing (src 12, 13)
-             confidence: medium. Retention is a guess.
-Document     id, project_id, folder, name, url, access_roles[]
-             evidence: document mgmt, granular access (src 7, 12)
-             confidence: medium
-Checklist    id, company_id, name, items[]
-Inspection   id, checklist_id, task_id, results[item, pass, photo_id], inspector_id
-             evidence: "quality control" (src 12)
-             confidence: guess
-Comment, Notification, ActivityLog
-             confidence: guess (standard)
+Organisation  id, name, logo_url, plan (free | pro | pro_plus | advanced)
+              evidence: S04 "(Free)", S29; src 9
+              confidence: high
+User          id, name, phone (verified), email?
+              evidence: S28
+              confidence: high
+Membership    org_id | project_id, user_id, role
+              evidence: S28 "Organization Management Team"; S27 "joined as Manager"; S25 Members (1)
+              confidence: high for org-level vs project-level roles. The full role list is unknown.
+Project       id, org_id, name, image_url, status (active | ...), start_date?, end_date?, progress_pct
+              evidence: S04 card (dates optional: "Start Date - End Date" placeholder)
+              confidence: high
+ProjectSettings project_id, attendance_remarks (bool), shift_hours (int, default 8), hourly_mode
+              evidence: S24
+              confidence: high
+Task          id (searchable), project_id, name, category ("General"), status (in_progress | delayed | ...),
+              work_order_id?, progress, dates
+              evidence: S08 search "by id, name", chips; S27 "brick work (General)"
+              confidence: medium
+TaskUpdate    task_id, user_id, date, progress, remarks, photo_ids
+              evidence: S06 "Task Updates: task progress, attendance & remarks"; S27 "Update Task Progress"
+              confidence: medium
+Issue         id, project_id, text, due_date?, assignee_id?, status (open | closed), task_id?, raised_by
+              evidence: S31, S08 chip "Task with Open Issues", S27
+              confidence: high
+Comment       parent (issue | task | feed item), user_id, text
+              evidence: S27 comment counts, "Give Reply"
+              confidence: high
+ActivityEvent project_id, actor_id, verb, object, created_at
+              evidence: S27
+              confidence: high
+Media         id, project_id, album_id?, type (photo | video), url, taken_at
+Album         id, project_id, name
+              evidence: S30, S32 video mode
+              confidence: high
+DriveFile     id, project_id, folder, name, url
+              evidence: S25 Drive
+              confidence: medium
+Material      id, org_id, name, spec/brand ("acc"), uom ("pk")
+Inventory     project_id, owner (project | subcontractor_id), material_id, in_stock
+              evidence: S15 incl. "project and subcontractor inventories"
+              confidence: high
+Indent        id, project_id, lines[material_id, qty], status
+PurchaseOrder id, project_id, vendor_id, lines[...], expected delivery, status
+GRN           id, project_id, po_id?, lines[...]
+TransferOrder id, from_project_id, to_project_id, lines[...]
+TransferRequest id, requesting_project_id, source_project_id, lines[...], status
+MaterialIssue id, project_id, task_id | subcontractor_id, lines[...]
+MaterialReturn id, project_id, from (task | subcontractor), lines[...]
+Consumption   project_id, material_id, qty, date
+              evidence: S12–S20, S06 Material parts
+              confidence: high for the entities, guess for the fields
+Vendor        id, org_id, name, phone, gstin
+              evidence: POs need a vendor
+              confidence: guess
+Worker        id, project_id, name, type/skill, wage (daily | hourly), contractor?
+AttendanceRecord worker_id, date, status | hours, remarks?
+Payable       id, project_id, kind (attendance | purchase_order | grn | work_order | custom),
+              party, period_start, period_end, amount, status
+              evidence: S21, S23, S24, S06 Payables parts
+              confidence: high for the entities. The payable kinds come straight from S06.
+WorkOrder     id, project_id, subcontractor_id, lines, amount
+              evidence: S06 Payables > Work Order, S08 chip "Task with Work order"
+              confidence: medium
+Expense       derived + manual: category (material | subcontractor | attendance | petty_spend | misc | assets), amount, date, record_ref
+              evidence: S26
+              confidence: high for categories; medium for which are derived vs entered
+Report        id, project_id, type (detailed | summary), from, to, parts[], file_url, expires_at (+15 days)
+              evidence: S06, S07
+              confidence: high
+ChatThread / Message  org- and project-level
+              evidence: chat icon in S04 and S05
+              confidence: medium
 ```
 
-Relationships: Company 1-n Project, Company 1-n Membership n-1 User, Project 1-n Task 1-n ProgressUpdate,
-Project 1-n AttendanceEntry n-1 Worker n-1 LabourContractor, Project 1-n MaterialRequest 1-n PurchaseOrder 1-n GRN,
-Vendor 1-n PurchaseOrder, Project 1-n Stock, Project 1-1 PettyCashLedger, Project 1-n WorkOrder 1-n SubconBill,
-Project 1-n Document, Task 1-n Inspection.
+Relationships: Organisation 1-n Project. Organisation and Project 1-n Membership n-1 User. Project 1-n Task 1-n TaskUpdate.
+Task 0-1 WorkOrder. Task 1-n Issue. Project 1-n Inventory per owner (project or subcontractor).
+Project 1-n Indent → PurchaseOrder → GRN. Project 1-n Worker 1-n AttendanceRecord → Payable.
+Project 1-n Media n-0..1 Album. Project 1-n Report. Expenses roll up from GRN/PO, payables, work orders and petty spend.
 
 ## Feature matrix
 
-See `features.csv`. Must: 30, should: 20, could: 11, skip: 4.
+See `features.csv`. Must: 33, should: 28, could: 14, skip: 4.
+
+## What the screenshots show that we can beat
+
+- **Raw backend errors reach users.** S21 shows `"end_date" must be greater than ref:start_date` on an
+  empty attendance screen. Validate dates and show plain-language messages.
+- **Reports disappear after 15 days** (S07). Keep them longer.
+- **No delete for wrong attendance or GRN entries** (src 11). Allow corrections with an audit trail.
+- **Empty days generate "inactivity" issues from vendor support** (S31, S27). Ship a gentler reminder instead.
 
 ## Out of scope (cannot or should not be cloned)
 
-- The Powerplay name, logo, colours, illustrations, marketing copy and screenshots. `/replica-brand` gives you your own.
-- Their customer base, reviews, ratings and case studies.
-- Their translations. All 8 languages must be translated from scratch, by you or a translator.
-- Any partner integrations or deals (none were confirmed publicly).
-- Their private APIs or app code. Nothing was decompiled and nothing should be.
+- Powerplay's name, logo, navy/blue palette as a brand, **illustrations** (warehouse, wheelbarrow, worker,
+  folder), icons, and copy ("Get organised by creating and updating your 1st task!" etc.). Write your own text.
+- The screenshots themselves. They are reference only and never ship.
+- Their customers, reviews, case studies and translations.
+- "Powerplay Support" actions inside customer projects. That is their support team, not a feature.
+- Partner integrations or deals (none confirmed).
 
 ## Size
 
-Screens 29, flows 10, entities ~25.
+Screens 38 (26 observed), flows 10, entities ~30.
 
 Hard parts:
-1. **Offline-first sync with photos.** Sites have bad network. Entries and photos must queue locally and sync without duplicates or lost edits.
-2. **Money correctness.** Payroll (half days, OT, advances), PO/GRN partials, subcontractor retention and petty cash all have to reconcile to the rupee.
-3. **Roles and permissions across companies and projects**, plus approval chains (request → PO).
-4. **PDF reports in 8 languages** (Indic scripts in PDFs need the right fonts and shaping).
-5. **Android performance** on low-end phones.
+1. **Material ledger.** Indent, PO, delivery, GRN, issue, return, transfer, consumption, per project
+   *and* per subcontractor inventory, all reconciling to stock.
+2. **Payables and expenses.** Attendance (daily or hourly shifts), POs, GRNs, work orders and custom
+   payables, rolled into six expense categories without double counting.
+3. **Report builder.** Any date range, any combination of 15+ parts, detailed vs summary, rendered to a shareable file.
+4. **Offline-first capture** (camera photo/video, attendance, GRN) with sync.
+5. **Roles at org and project level**, plus chat and feed.
 
-Size as asked ("everything"): **XL. Rescope it.** Build it in phases, each one sellable:
+Size as asked ("everything"): **XL. Rescope it.** Phases, each sellable:
 
-- **Phase 1 (M–L):** S01–S12, S15–S16, S19–S20, S22, S11. Projects, tasks, progress with photos, attendance, simple material in/out, petty cash and DPR, in English + Hindi, offline-first. This is the core loop.
-- **Phase 2 (M):** request → approval → PO → GRN, vendors, payroll and advances, reports hub, roles.
-- **Phase 3 (M–L):** subcontractor billing, documents, quality checklists, owner web dashboard, the other 6 languages.
+- **Phase 1 (M–L):** S01–S05, S08–S10, S21–S22, S24, S15–S16, S14, S19, S30, S32, S27, S06–S07 with Task, Photos,
+  Attendance and Inventory parts. That is projects, tasks with photo updates, attendance, simple stock,
+  feed and a daily report.
+- **Phase 2 (M):** indent → PO/deliveries → GRN, transfers and returns, payables, expenses, issues, members and roles.
+- **Phase 3 (M–L):** work orders and subcontractor inventory, summary report, chat, drive, albums, web dashboard, more languages.
 
-No promise of a perfect clone. The inferred screens need checking against real screenshots before `/replica-design`.
+No promise of a perfect clone. Take the "still unseen" screenshots before `/replica-design`.
