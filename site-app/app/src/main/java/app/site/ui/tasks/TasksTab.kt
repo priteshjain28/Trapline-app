@@ -110,8 +110,10 @@ fun TasksTab(project: Project, onNew: () -> Unit, onOpen: (String) -> Unit) {
 }
 
 private fun matches(t: Task, query: String, filters: Set<String>, today: LocalDate): Boolean {
-    val q = query.trim().removePrefix("#")
-    val textOk = q.isEmpty() || t.name.contains(q, ignoreCase = true) || t.number?.toString() == q
+    val raw = query.trim()
+    val q = raw.removePrefix("#")
+    // "#2" means task number 2 only; plain text matches the name or the number
+    val textOk = q.isEmpty() || t.number?.toString() == q || (!raw.startsWith("#") && t.name.contains(q, ignoreCase = true))
     val filterOk = filters.all { f ->
         when (TaskFilter.valueOf(f)) {
             TaskFilter.IN_PROGRESS -> t.status == TaskStatus.IN_PROGRESS

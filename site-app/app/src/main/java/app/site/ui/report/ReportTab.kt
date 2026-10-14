@@ -71,7 +71,8 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
         null -> from to to
         else -> today.minusDays(d) to today
     }
-    val nothingPicked = !updates && !photos && !attendance
+    // photos ride on work done, so they don't count on their own
+    val nothingPicked = !updates && !attendance
 
     Column(Modifier.fillMaxSize()) {
         Column(
