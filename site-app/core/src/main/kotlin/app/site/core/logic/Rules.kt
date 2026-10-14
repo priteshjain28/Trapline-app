@@ -82,6 +82,17 @@ object Validate {
         else -> Result.success(lines.groupBy { it.materialId }.map { (id, ls) -> app.site.core.model.MaterialLine(id, ls.sumOf { it.qty }) })
     }
 
+    const val ALBUM_NAME_MAX = 60
+
+    fun albumName(name: String): Result<String> {
+        val n = name.trim().replace(Regex("\\s+"), " ")
+        return when {
+            n.isEmpty() -> fail("name", Reason.REQUIRED)
+            n.length > ALBUM_NAME_MAX -> fail("name", Reason.TOO_LONG)
+            else -> Result.success(n)
+        }
+    }
+
     fun notFuture(date: LocalDate, today: LocalDate): Result<Unit> =
         if (date.isAfter(today)) fail("date", Reason.IN_FUTURE) else Result.success(Unit)
 

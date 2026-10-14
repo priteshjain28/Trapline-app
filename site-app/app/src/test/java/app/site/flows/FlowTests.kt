@@ -3,6 +3,7 @@ package app.site.flows
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performTextClearance
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -453,5 +454,46 @@ class MaterialFlows : FlowTest() {
         type("Quantity", "0")
         assertTrue(shows("Enter a number above zero"))
         button("Save").assertIsNotEnabled()
+    }
+}
+
+/** F09: site photos and albums. */
+class GalleryFlows : FlowTest() {
+    private fun openGallery() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Photos"))
+        waitFor("No photos yet")
+    }
+
+    @Test fun g_H1_emptyGalleryThenAnAlbum() {
+        openGallery()
+        assertAccessible("S30 photos")
+        tap(tab("Albums"))
+        waitFor("No albums yet")
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("New album") and androidx.compose.ui.test.hasClickAction())[0])
+        type("Album name", "Slab 4 pour")
+        tap(button("Create album"))
+        waitFor("Slab 4 pour")
+        assertTrue("inside the new album", shows("Add photos to this album, or move them in from the gallery."))
+        assertAccessible("S30 album")
+    }
+
+    @Test fun g_H2_photoViewerAndMoveToAlbum() {
+        openGallery()
+        kotlinx.coroutines.runBlocking {
+            val p = container.projects.projects().first().first { it.name == "Green Park Tower B" }
+            container.gallery.createAlbum(p.id, "Lobby").getOrThrow()
+            container.gallery.addPhotos(p.id, listOf("content://test/photo-1")).getOrThrow()
+        }
+        compose.waitUntil(5_000) { showsDesc("Photo, 13 Oct") }
+        tap(action("Photo, 13 Oct"))
+        waitFor("Added to the site")
+        tap(button("Move to album"))
+        tap(text("Lobby"))
+        compose.waitForIdle()
+        tap(tab("Albums"))
+        waitFor("1 photo")
     }
 }

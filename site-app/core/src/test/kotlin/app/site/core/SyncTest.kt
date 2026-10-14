@@ -182,6 +182,41 @@ class SyncTest {
         assertEquals(AppError.Reason.NOT_ENOUGH_STOCK, (r.exceptionOrNull() as AppError.Invalid).reason)
     }
 
+    @Test fun galleryPhotosAndAlbumsSync() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val b = Phone("9876500000")
+        b.signIn(name = "Ravi", org = null)
+        val orgId = server.rows("organisations").first().s("id")!!
+        val ravi = server.rows("profiles").first { it.s("name") == "Ravi" }.s("id")!!
+        server.tables["org_members"]!!.values.removeIf { it.s("user_id") == ravi }
+        server.addMember(orgId, ravi)
+        b.app.verifyOtp(b.number, "123456").getOrThrow()
+        val p = a.app.create(NewProject("Tower")).getOrThrow()
+        a.sync(); b.sync()
+
+        a.net.offline = true
+        a.files.content["content://g1"] = byteArrayOf(9, 9)
+        val album = a.app.createAlbum(p.id, "Slab pour").getOrThrow()
+        a.app.addPhotos(p.id, listOf("content://g1"), album.id).getOrThrow()
+        assertEquals("content://g1", a.app.photos(p.id).first().single().ref, "shows straight away from the phone")
+        // B names the same album offline: one album once both sync
+        b.app.createAlbum(p.id, "slab pour").getOrThrow()
+
+        a.net.offline = false
+        a.sync(); b.sync(); a.sync()
+        assertEquals(1, server.rows("albums").size)
+        val photo = b.app.photos(p.id).first().single()
+        assertTrue(photo.ref.startsWith("storage:project-media/${p.id}/"), "B loads it from the server")
+        assertEquals(1, b.app.albums(p.id).first().single().photoCount)
+        assertEquals(listOf(9.toByte(), 9.toByte()), server.files.values.single().toList())
+
+        // B takes it out of the album; A sees that
+        b.app.moveToAlbum(listOf(photo.id), null).getOrThrow()
+        b.sync(); a.sync()
+        assertNull(server.rows("media").single().s("album_id"))
+        assertEquals(0, a.app.albums(p.id).first().single().photoCount)
+    }
+
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {
         val a = Phone("9876543210").apply { signIn() }
         val p = a.app.create(NewProject("Tower")).getOrThrow()

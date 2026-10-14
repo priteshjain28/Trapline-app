@@ -357,4 +357,29 @@
     <string name="err_not_enough_stock">That\'s more than the site holds</string>
     <string name="a11y_remove_line">Remove this material</string>
     <string name="err_in_future">That date hasn\'t happened yet</string>
+
+    <!-- gallery (S30) -->
+    <string name="gallery_photos">Photos</string>
+    <string name="gallery_albums">Albums</string>
+    <string name="gallery_empty_title">No photos yet</string>
+    <string name="gallery_empty_body">Photos from work updates show here too. Add site photos any time.</string>
+    <string name="gallery_album_empty_body">Add photos to this album, or move them in from the gallery.</string>
+    <string name="albums_empty_title">No albums yet</string>
+    <string name="albums_empty_body">Group photos by floor, slab or stage, so they\'re easy to find later.</string>
+    <string name="action_add_photos">Add photos</string>
+    <string name="action_new_album">New album</string>
+    <string name="action_create_album">Create album</string>
+    <string name="action_move_to_album">Move to album</string>
+    <string name="action_remove_from_album">Take out of album</string>
+    <string name="field_album_name">Album name</string>
+    <string name="field_album_name_placeholder">Slab 4 pour, Lobby finishing</string>
+    <plurals name="album_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <string name="photo_from_task">From %1$s</string>
+    <string name="photo_added">Added to the site</string>
+    <string name="a11y_photo_taken">Photo, %1$s</string>
+    <string name="a11y_close">Close</string>
+    <string name="gallery_pick_album">Move to which album?</string>
 </resources>

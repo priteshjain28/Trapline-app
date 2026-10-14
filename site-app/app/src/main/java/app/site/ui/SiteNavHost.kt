@@ -15,6 +15,7 @@ import app.site.LocalContainer
 import app.site.ui.attendance.AddWorkerScreen
 import app.site.ui.attendance.AttendanceSettingsScreen
 import app.site.ui.auth.SignInScreen
+import app.site.ui.gallery.GalleryScreen
 import app.site.ui.material.AddMaterialScreen
 import app.site.ui.material.IssueScreen
 import app.site.ui.material.MaterialDetailScreen
@@ -47,6 +48,8 @@ object Routes {
     const val RECEIVE = "project/{pid}/material/receive"
     const val ISSUE = "project/{pid}/material/issue"
     const val MATERIAL = "project/{pid}/stock/{mid}"
+    const val GALLERY = "project/{pid}/gallery"
+    const val ALBUM = "project/{pid}/albums/{aid}"
 
     fun project(pid: String, tab: Int = 0) = "project/$pid?tab=$tab"
     fun newTask(pid: String) = "project/$pid/tasks/new"
@@ -56,6 +59,8 @@ object Routes {
     fun feed(pid: String) = "project/$pid/feed"
     fun attendanceSettings(pid: String) = "project/$pid/settings/attendance"
     fun planned(p: Planned) = "planned/${p.id}"
+    fun gallery(pid: String) = "project/$pid/gallery"
+    fun album(pid: String, aid: String) = "project/$pid/albums/$aid"
     fun material(pid: String, nav: MaterialNav) = when (nav) {
         MaterialNav.AddMaterial -> "project/$pid/material/new"
         MaterialNav.Receive -> "project/$pid/material/receive"
@@ -118,9 +123,17 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                 onReports = { nav.navigate(Routes.reports(projectId)) },
                 onFeed = { nav.navigate(Routes.feed(projectId)) },
                 onAttendanceSettings = { nav.navigate(Routes.attendanceSettings(projectId)) },
-                onPlanned = { nav.navigate(Routes.planned(it)) },
+                onPlanned = { if (it == Planned.GALLERY) nav.navigate(Routes.gallery(projectId)) else nav.navigate(Routes.planned(it)) },
                 onMaterial = { nav.navigate(Routes.material(projectId, it)) },
             )
+        }
+        composable(Routes.GALLERY, listOf(pid)) { e ->
+            val projectId = e.arguments?.getString("pid").orEmpty()
+            GalleryScreen(projectId, onBack = { nav.popBackStack() }, onAlbum = { nav.navigate(Routes.album(projectId, it)) })
+        }
+        composable(Routes.ALBUM, listOf(pid, navArgument("aid") { type = NavType.StringType })) { e ->
+            val projectId = e.arguments?.getString("pid").orEmpty()
+            GalleryScreen(projectId, onBack = { nav.popBackStack() }, onAlbum = {}, albumId = e.arguments?.getString("aid"))
         }
         composable(Routes.ADD_MATERIAL, listOf(pid)) { e ->
             AddMaterialScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })

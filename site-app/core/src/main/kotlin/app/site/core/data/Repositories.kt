@@ -139,3 +139,16 @@ interface MaterialRepository {
     /** Opening stock, material used, or a count. A count that matches the stock records nothing. */
     suspend fun adjust(input: app.site.core.model.NewAdjustment): Result<Unit>
 }
+
+/** Photos of a site and the albums they're grouped in. */
+interface GalleryRepository {
+    /** Newest first, from work updates and added straight to the gallery. */
+    fun photos(projectId: String): Flow<List<app.site.core.model.Photo>>
+    fun albums(projectId: String): Flow<List<app.site.core.model.Album>>
+    /** Adds photos (local URIs) to the site, optionally into an album. Returns how many were added. */
+    suspend fun addPhotos(projectId: String, uris: List<String>, albumId: String? = null): Result<Int>
+    /** Creates an album, or returns the existing one with the same name. */
+    suspend fun createAlbum(projectId: String, name: String): Result<app.site.core.model.Album>
+    /** Moves photos into an album, or out of every album with null. */
+    suspend fun moveToAlbum(photoIds: List<String>, albumId: String?): Result<Unit>
+}

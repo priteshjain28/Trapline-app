@@ -1,0 +1,11 @@
+-- Version 2 -> 3: albums, and which album and person a photo belongs to.
+
+ALTER TABLE media ADD COLUMN album_id TEXT;
+ALTER TABLE media ADD COLUMN uploaded_by TEXT;
+CREATE INDEX media_project ON media(project_id, taken_at);
+
+CREATE TABLE album (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  name TEXT NOT NULL
+);

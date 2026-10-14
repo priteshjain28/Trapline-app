@@ -60,12 +60,13 @@ class AppContainer(
     val people: PeopleRepository
     val sync: SyncRepository
     val materials: app.site.core.data.MaterialRepository
+    val gallery: app.site.core.data.GalleryRepository
 
     init {
         if (demo) {
             val fake = FakeBackend(clock, latencyMs)
             http = null
-            session = fake; projects = fake; tasks = fake; attendance = fake; reports = fake; activity = fake; people = fake; sync = fake; materials = fake
+            session = fake; projects = fake; tasks = fake; attendance = fake; reports = fake; activity = fake; people = fake; sync = fake; materials = fake; gallery = fake
         } else {
             val tokens = PrefsTokenStore(context)
             val client = HttpClient(OkHttp) {
@@ -75,7 +76,7 @@ class AppContainer(
             val db = SiteDb(AndroidSqliteDriver(SiteDb.Schema, context, "site.db"))
             val real = SyncedBackend(db, api, api, tokens, AndroidFileStore(context), appScope, clock)
             http = api
-            session = real; projects = real; tasks = real; attendance = real; reports = real; activity = real; people = real; sync = real; materials = real
+            session = real; projects = real; tasks = real; attendance = real; reports = real; activity = real; people = real; sync = real; materials = real; gallery = real
         }
     }
 

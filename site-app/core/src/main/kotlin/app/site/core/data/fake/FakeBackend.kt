@@ -66,7 +66,7 @@ class FakeBackend(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -90,6 +90,11 @@ class FakeBackend(
         val grns: Map<String, Grn> = emptyMap(),
         val issues: Map<String, MaterialIssue> = emptyMap(),
         val adjustments: Map<String, Adjustment> = emptyMap(),
+        /** Photos added straight to the gallery; photos on work updates live on the update. */
+        val photos: Map<String, app.site.core.model.Photo> = emptyMap(),
+        val albums: Map<String, app.site.core.model.Album> = emptyMap(),
+        /** Album of a work-update photo, by its gallery id. */
+        val photoAlbums: Map<String, String> = emptyMap(),
     )
 
     /** A stock_adjustments row: [qty] is signed, like the server's. */
@@ -436,6 +441,73 @@ class FakeBackend(
         }.sortedBy { it.material.label.lowercase() }
 
     private fun round3(x: Double) = Math.round(x * 1000) / 1000.0
+
+    // ------------------------------------------------------------------ gallery
+
+    private fun allPhotos(s: State, projectId: String): List<app.site.core.model.Photo> {
+        val fromUpdates = s.updates.values.filter { it.projectId == projectId }.flatMap { u ->
+            u.photos.mapIndexed { i, ref ->
+                val id = "${u.id}#$i"
+                app.site.core.model.Photo(id, projectId, ref, u.createdAt, s.photoAlbums[id], u.taskId, u.authorId)
+            }
+        }
+        return (fromUpdates + s.photos.values.filter { it.projectId == projectId }).sortedByDescending { it.takenAt }
+    }
+
+    override fun photos(projectId: String): Flow<List<app.site.core.model.Photo>> = state.map { s -> allPhotos(s, projectId) }
+
+    override fun albums(projectId: String): Flow<List<app.site.core.model.Album>> = state.map { s ->
+        val photos = allPhotos(s, projectId)
+        s.albums.values.filter { it.projectId == projectId }.map { a ->
+            val mine = photos.filter { it.albumId == a.id }
+            a.copy(photoCount = mine.size, coverRef = mine.firstOrNull()?.ref)
+        }.sortedBy { it.name.lowercase() }
+    }
+
+    override suspend fun addPhotos(projectId: String, uris: List<String>, albumId: String?): Result<Int> {
+        io()
+        val by = runCatching { me() }.getOrElse { return Result.failure(it) }
+        if (state.value.projects[projectId] == null) return Result.failure(AppError.NotAllowed)
+        if (albumId != null && state.value.albums[albumId]?.projectId != projectId) return Result.failure(AppError.NotAllowed)
+        if (uris.isEmpty()) return Result.failure(AppError.Invalid("photos", AppError.Reason.REQUIRED))
+        val now = clock.instant()
+        val added = uris.mapIndexed { i, uri ->
+            // a millisecond apart keeps the order they were picked in
+            app.site.core.model.Photo(newId(), projectId, uri, now.plusMillis(i.toLong()), albumId, null, by.id)
+        }
+        state.update { st -> st.copy(photos = st.photos + added.associateBy { it.id }) }
+        return Result.success(added.size)
+    }
+
+    override suspend fun createAlbum(projectId: String, name: String): Result<app.site.core.model.Album> {
+        io()
+        val n = Validate.albumName(name).getOrElse { return Result.failure(it) }
+        if (state.value.projects[projectId] == null) return Result.failure(AppError.NotAllowed)
+        val id = app.site.core.model.Album.idFor(projectId, n)
+        state.value.albums[id]?.let { return Result.success(it) }
+        val a = app.site.core.model.Album(id, projectId, n)
+        state.update { it.copy(albums = it.albums + (id to a)) }
+        return Result.success(a)
+    }
+
+    override suspend fun moveToAlbum(photoIds: List<String>, albumId: String?): Result<Unit> {
+        io()
+        if (albumId != null && state.value.albums[albumId] == null) return Result.failure(AppError.NotAllowed)
+        state.update { s ->
+            var photos = s.photos
+            var links = s.photoAlbums
+            for (id in photoIds) {
+                val p = photos[id]
+                when {
+                    p != null -> photos = photos + (id to p.copy(albumId = albumId))
+                    albumId == null -> links = links - id
+                    else -> links = links + (id to albumId)
+                }
+            }
+            s.copy(photos = photos, photoAlbums = links)
+        }
+        return Result.success(Unit)
+    }
 
     // ------------------------------------------------------------------ feed
 

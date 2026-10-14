@@ -74,6 +74,9 @@ import app.site.core.local.Task as TaskRow
 import app.site.core.local.Task_update as UpdateRow
 import app.site.core.local.Worker as WorkerRow
 import app.site.core.local.Grn as GrnRow
+import app.site.core.local.Album as AlbumRow
+import app.site.core.model.Album
+import app.site.core.model.Photo
 import app.site.core.local.Grn_line as GrnLineRow
 import app.site.core.local.Material as MaterialRow
 import app.site.core.local.Material_issue as IssueRow
@@ -110,7 +113,7 @@ class SyncedBackend(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository {
 
     private val q = db.siteQueries
 
@@ -123,7 +126,7 @@ class SyncedBackend(
             "reports" to q::deleteReport, "activity_events" to q::deleteActivity,
             "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine,
             "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
-            "stock_adjustments" to q::deleteAdjustment,
+            "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
         ),
         restore = ::restore,
     )
@@ -307,7 +310,7 @@ class SyncedBackend(
             for (uri in v.photos) {
                 val mediaId = newId()
                 val path = "${t.project_id}/$mediaId.jpg"
-                q.upsertMedia(MediaRow(mediaId, t.project_id, row.id, uri, null, now()))
+                q.upsertMedia(MediaRow(mediaId, t.project_id, row.id, uri, null, now(), null, user.id))
                 // the file first, then the row that points at it
                 engine.enqueueUpload(mediaId, "project-media", path, uri, "image/jpeg")
                 engine.enqueueUpsert("media", mediaId, buildJsonObject {
@@ -621,6 +624,72 @@ class SyncedBackend(
         m.qty, LocalDate.parse(m.day), m.number?.toInt(), m.task_id, m.note, SyncEngine.parseInstant(m.created_at),
     )
 
+    // ================================================================ gallery
+
+    override fun photos(projectId: String): Flow<List<Photo>> = q.photos(projectId).asFlow().mapToList(io).map { rows ->
+        rows.map { m ->
+            Photo(m.id, m.project_id, m.local_uri ?: "storage:project-media/${m.storage_path}", SyncEngine.parseInstant(m.taken_at),
+                m.album_id, m.task_id, m.uploaded_by)
+        }
+    }
+
+    override fun albums(projectId: String): Flow<List<Album>> =
+        combine(q.albums(projectId).asFlow().mapToList(io), photos(projectId)) { albums, photos ->
+            albums.map { a ->
+                val mine = photos.filter { it.albumId == a.id }
+                Album(a.id, a.project_id, a.name, mine.size, mine.firstOrNull()?.ref)
+            }
+        }
+
+    override suspend fun addPhotos(projectId: String, uris: List<String>, albumId: String?): Result<Int> = call {
+        val user = me()
+        q.project(projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        if (albumId != null && q.album(albumId).executeAsOneOrNull()?.project_id != projectId) throw AppError.NotAllowed
+        if (uris.isEmpty()) throw AppError.Invalid("photos", AppError.Reason.REQUIRED)
+        val start = clock.instant()
+        db.transaction {
+            uris.forEachIndexed { i, uri ->
+                val id = newId()
+                val path = "$projectId/$id.jpg"
+                val taken = start.plusMillis(i.toLong()).toString()
+                q.upsertMedia(MediaRow(id, projectId, null, uri, null, taken, albumId, user.id))
+                // the file first, then the row that points at it
+                engine.enqueueUpload(id, "project-media", path, uri, "image/jpeg")
+                engine.enqueueUpsert("media", id, buildJsonObject {
+                    put("id", id); put("project_id", projectId); put("kind", "photo"); put("storage_path", path)
+                    put("taken_at", taken); putOrNull("album_id", albumId); put("uploaded_by", user.id)
+                })
+            }
+        }
+        syncNow()
+        uris.size
+    }
+
+    override suspend fun createAlbum(projectId: String, name: String): Result<Album> = call {
+        val n = Validate.albumName(name).getOrThrow()
+        q.project(projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val id = Album.idFor(projectId, n)
+        q.album(id).executeAsOneOrNull()?.let { return@call Album(it.id, it.project_id, it.name) }
+        db.transaction {
+            q.upsertAlbum(AlbumRow(id, projectId, n))
+            engine.enqueueUpsert("albums", id, buildJsonObject { put("id", id); put("project_id", projectId); put("name", n) })
+        }
+        syncNow()
+        Album(id, projectId, n)
+    }
+
+    override suspend fun moveToAlbum(photoIds: List<String>, albumId: String?): Result<Unit> = call {
+        if (albumId != null) q.album(albumId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        db.transaction {
+            for (id in photoIds) {
+                q.mediaOne(id).executeAsOneOrNull() ?: continue
+                q.setMediaAlbum(albumId, id)
+                engine.enqueueUpdate("media", id, mapOf("id" to "eq.$id"), buildJsonObject { putOrNull("album_id", albumId) })
+            }
+        }
+        syncNow()
+    }
+
     // ================================================================ feed
 
     override fun feed(projectId: String): Flow<List<ActivityEvent>> =
@@ -655,10 +724,14 @@ class SyncedBackend(
             q.upsertUpdate(UpdateRow(o.str("id"), o.str("task_id"), o.str("project_id"), o.strOrNull("author_id"), o.str("work_date"),
                 o.dblOrNull("qty_done"), o.dblOrNull("progress_pct"), o.strOrNull("remarks"), o.str("created_at")))
         }, { it.str("id") }),
-        SyncEngine.PullSpec("media", "id,project_id,task_update_id,storage_path,taken_at,updated_at", { o ->
-            val old = q.mediaForUpdate(o.strOrNull("task_update_id")).executeAsList().firstOrNull { it.id == o.str("id") }
+        SyncEngine.PullSpec("media", "id,project_id,task_update_id,storage_path,taken_at,album_id,uploaded_by,updated_at", { o ->
+            // keep this phone's own file: it shows without a download
+            val old = q.mediaOne(o.str("id")).executeAsOneOrNull()
             q.upsertMedia(MediaRow(o.str("id"), o.str("project_id"), o.strOrNull("task_update_id"), old?.local_uri,
-                o.strOrNull("storage_path"), o.str("taken_at")))
+                o.strOrNull("storage_path"), o.str("taken_at"), o.strOrNull("album_id"), o.strOrNull("uploaded_by")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("albums", "id,project_id,name,updated_at", { o ->
+            q.upsertAlbum(AlbumRow(o.str("id"), o.str("project_id"), o.str("name")))
         }, { it.str("id") }),
         SyncEngine.PullSpec("workers", "id,org_id,project_id,name,skill,phone,wage_type,wage_paise,ot_rate_paise,active,updated_at", { o ->
             q.upsertWorker(WorkerRow(o.str("id"), o.str("org_id"), o.str("project_id"), o.str("name"), o.strOrNull("skill"),
@@ -726,7 +799,7 @@ class SyncedBackend(
         "projects" to q::deleteProject, "tasks" to q::deleteTask, "task_updates" to q::deleteUpdate, "media" to q::deleteMedia,
         "workers" to q::deleteWorker, "reports" to q::deleteReport,
         "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine, "material_issues" to q::deleteIssue,
-        "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment,
+        "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
     )
 
     // ================================================================ errors

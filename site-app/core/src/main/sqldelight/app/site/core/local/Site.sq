@@ -59,9 +59,18 @@ CREATE TABLE media (
   task_update_id TEXT,
   local_uri TEXT,
   storage_path TEXT,
-  taken_at TEXT NOT NULL
+  taken_at TEXT NOT NULL,
+  album_id TEXT,
+  uploaded_by TEXT
 );
 CREATE INDEX media_update ON media(task_update_id);
+CREATE INDEX media_project ON media(project_id, taken_at);
+
+CREATE TABLE album (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  name TEXT NOT NULL
+);
 
 CREATE TABLE worker (
   id TEXT NOT NULL PRIMARY KEY,
@@ -257,6 +266,25 @@ mediaForUpdate:
 SELECT * FROM media WHERE task_update_id = ? ORDER BY taken_at;
 mediaForProject:
 SELECT * FROM media WHERE project_id = ?;
+photos:
+SELECT m.id, m.project_id, m.local_uri, m.storage_path, m.taken_at, m.album_id, m.uploaded_by, u.task_id
+FROM media m LEFT JOIN task_update u ON u.id = m.task_update_id
+WHERE m.project_id = ?
+ORDER BY m.taken_at DESC;
+mediaOne:
+SELECT * FROM media WHERE id = ?;
+setMediaAlbum:
+UPDATE media SET album_id = ? WHERE id = ?;
+
+upsertAlbum:
+INSERT OR REPLACE INTO album VALUES ?;
+album:
+SELECT * FROM album WHERE id = ?;
+albums:
+SELECT * FROM album WHERE project_id = ? ORDER BY lower(name);
+deleteAlbum:
+DELETE FROM album WHERE id = ?;
+
 setMediaStoragePath:
 UPDATE media SET storage_path = ? WHERE id = ?;
 deleteMedia:
@@ -396,6 +424,7 @@ wipe {
   DELETE FROM task;
   DELETE FROM task_update;
   DELETE FROM media;
+  DELETE FROM album;
   DELETE FROM worker;
   DELETE FROM attendance;
   DELETE FROM report;
