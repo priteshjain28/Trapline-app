@@ -4,10 +4,7 @@
 \set ON_ERROR_STOP 1
 set client_min_messages = warning;
 
--- Supabase grants these by default; plain Postgres does not.
-grant usage on schema public to authenticated;
-grant all on all tables in schema public to authenticated;
-grant execute on all functions in schema public to authenticated;
+-- Grants come from the default privileges in local_auth_stub.sql, as on Supabase.
 
 create function pg_temp.ok(cond boolean, msg text) returns void language plpgsql as
 $$ begin if cond is not true then raise exception 'FAIL: %', msg; end if; end $$;
@@ -16,12 +13,15 @@ create function pg_temp.as_user(u uuid) returns void language sql as
 $$ select set_config('request.jwt.claim.sub', u::text, false) $$;
 
 -- people: A owner, B engineer (invited), C outsider
-insert into auth.users values
-  ('00000000-0000-0000-0000-00000000000a'), ('00000000-0000-0000-0000-00000000000b'), ('00000000-0000-0000-0000-00000000000c');
-insert into profiles (id, name, phone) values
-  ('00000000-0000-0000-0000-00000000000a', 'Owner A', '+910000000001'),
-  ('00000000-0000-0000-0000-00000000000b', 'Engineer B', '+910000000002'),
-  ('00000000-0000-0000-0000-00000000000c', 'Outsider C', '+910000000003');
+-- phone sign-in creates the auth user; a trigger creates the profile (Supabase stores phones without '+')
+insert into auth.users (id, phone) values
+  ('00000000-0000-0000-0000-00000000000a', '910000000001'),
+  ('00000000-0000-0000-0000-00000000000b', '910000000002'),
+  ('00000000-0000-0000-0000-00000000000c', '910000000003');
+select pg_temp.ok((select count(*) = 3 from profiles where phone like '+91%'), 'profiles created from auth users');
+update profiles set name = 'Owner A' where id = '00000000-0000-0000-0000-00000000000a';
+update profiles set name = 'Engineer B' where id = '00000000-0000-0000-0000-00000000000b';
+update profiles set name = 'Outsider C' where id = '00000000-0000-0000-0000-00000000000c';
 
 set role authenticated;
 
