@@ -1,0 +1,66 @@
+feature,area,priority,original,clone,notes
+Sign in with phone number and OTP,onboarding,must,yes,no,guess: phone-first is the norm in this market; S02
+Pick app language on first launch,onboarding,must,yes,no,S01; phase 1 ships English + Hindi
+Create a company workspace,onboarding,must,yes,no,S03
+Invite team members by phone with a role,team,must,yes,no,S07; admin-defined permissions (src 7)
+Role-based access per project,team,must,yes,no,S07; role names are a guess
+Create and edit projects,projects,must,yes,no,S05
+Projects list with progress and today's status,projects,must,yes,no,S04
+Project dashboard with today's tiles,projects,must,yes,no,S06
+Create tasks with quantity unit dates and assignee,tasks,must,yes,no,S08
+Update task progress with photos and notes,tasks,must,yes,no,S09 S10; daily log + photos (src 1)
+Task status and overdue flag,tasks,must,yes,no,S08
+Capture photos in-app and attach to updates,photos,must,yes,no,S10
+Auto-generated Daily Progress Report,reports,must,yes,no,S11; the headline feature (src 1)
+Share DPR as PDF via the system share sheet,reports,must,yes,no,S11; covers WhatsApp without an integration
+Add workers with skill and daily wage,labour,must,yes,no,S13
+Mark daily attendance present absent half-day,labour,must,yes,no,S12 (src 4 5)
+Overtime hours on attendance,labour,must,yes,no,S12 (src 4)
+Labour contractors with their workers,labour,must,yes,no,S13
+Material catalogue with units,material,must,yes,no,S28
+Record material received on site (GRN) with challan photo,material,must,yes,no,S19 (src 3 10)
+Record material used,material,must,yes,no,S20
+Site stock balance per material,material,must,yes,no,S15 (src 3)
+Raise a material request (indent),material,must,yes,no,S16 (src 2 10)
+Petty cash in and out per project,money,must,yes,no,S22 (src 3)
+Expenses with category and bill photo,money,must,yes,no,S22
+Offline entry with background sync,platform,must,unknown,no,unverified on the original (src 14); must for your sites anyway
+Hindi translation,platform,must,yes,no,own translation; never copy theirs
+Activity feed and push notifications,platform,must,yes,no,S27
+Approvals for material requests,material,must,yes,no,S17
+Multi-project owner overview,projects,must,yes,no,S04 / S29 (src 7)
+Purchase orders from approved requests,material,should,yes,no,S18 (src 3 12)
+PO PDF to share with vendor,material,should,yes,no,S18
+Partial and excess deliveries against a PO,material,should,yes,no,S19
+Transfer material between projects,material,should,yes,no,S20; "movement of materials" (src 2)
+Low-stock alert,material,should,unknown,no,S15; guess
+Vendor list with amounts owed,material,should,yes,no,S21; vendor payments (src 7)
+Payroll for a period from attendance,labour,should,yes,no,S14 (src 4)
+Advances to workers and recovery from wages,labour,should,yes,no,S14 (src 5)
+Mark wages paid,labour,should,yes,no,S14
+Weekly progress report,reports,should,yes,no,"""Daily/Weekly"" (src 8)"
+Attendance report export,reports,should,yes,no,S26
+Material report export,reports,should,yes,no,S26
+Expense report export,reports,should,yes,no,S26
+Excel export of reports,reports,should,unknown,no,S26; guess
+Comments on tasks,tasks,should,unknown,no,S09; guess
+Delete or correct attendance and GRN entries with audit trail,labour,should,partial,no,users complain it is missing (src 11): beat it here
+Custom expense categories,money,should,yes,no,S28 (src 3)
+Back-dated entries with permission,platform,should,unknown,no,guess
+Edit-locking for past days,platform,should,unknown,no,S12; guess
+Task timeline view,tasks,should,yes,no,"""project timelines"" (src 6)"
+Subcontractor work orders with item rates,subcontractors,could,yes,no,S23 (src 12 13)
+Subcontractor bills against measured work,subcontractors,could,yes,no,S23
+Retention and advance recovery on bills,subcontractors,could,unknown,no,S23; src 13 says not detailed
+Documents and drawings with folder permissions,documents,could,yes,no,S24 (src 7 12)
+Quality checklists and inspections,quality,could,yes,no,S25; src 12 says quality control: details guessed
+Failed inspection raises a task,quality,could,unknown,no,S25; guess
+Owner web dashboard,platform,could,yes,no,S29
+Budget vs actual per project,money,could,unknown,no,S06; guess
+Geotagged photos,photos,could,unknown,no,S10; guess
+Six more Indian languages (Tamil Telugu Kannada Malayalam Bengali Odia),platform,could,yes,no,(src 8); own translations
+iOS app,platform,could,yes,no,(src 2)
+Powerplay name logo colours and marketing copy,brand,skip,yes,skip,theirs; /replica-brand makes your own
+Their translations and help content,content,skip,yes,skip,theirs; translate from scratch
+Their customers reviews and case studies,network,skip,yes,skip,not a feature
+Partner integrations or deals,integrations,skip,unknown,skip,none confirmed publicly; add your own later
