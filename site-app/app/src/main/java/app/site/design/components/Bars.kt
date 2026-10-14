@@ -175,7 +175,7 @@ fun SegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -> Uni
         labels.forEachIndexed { i, label ->
             val on = i == selected
             Box(
-                Modifier.weight(1f).height(40.dp).clip(Radius.md)
+                Modifier.weight(1f).height(Size.touchMin).clip(Radius.md)
                     .then(if (on) Modifier.background(c.surfaceRaised).border(1.dp, c.border, Radius.md) else Modifier)
                     .selectable(on, onClick = { onSelect(i) }, role = Role.Tab),
                 contentAlignment = Alignment.Center,

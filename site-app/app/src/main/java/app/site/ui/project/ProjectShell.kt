@@ -40,7 +40,8 @@ import app.site.ui.Planned
 import app.site.ui.ProjectTab
 import app.site.ui.attendance.AttendanceTab
 import app.site.ui.label
-import app.site.ui.more.MaterialTab
+import app.site.ui.material.MaterialNav
+import app.site.ui.material.MaterialTab
 import app.site.ui.more.MoreTab
 import app.site.ui.report.ReportTab
 import app.site.ui.tasks.TasksTab
@@ -61,6 +62,7 @@ fun ProjectShell(
     onFeed: () -> Unit,
     onAttendanceSettings: () -> Unit,
     onPlanned: (Planned) -> Unit,
+    onMaterial: (MaterialNav) -> Unit = {},
 ) {
     val container = LocalContainer.current
     val session by container.session.session.collectAsStateWithLifecycle()
@@ -100,7 +102,7 @@ fun ProjectShell(
             else when (tab) {
                 ProjectTab.REPORT -> ReportTab(p, onReports)
                 ProjectTab.TASKS -> TasksTab(p, onNewTask, onTask)
-                ProjectTab.MATERIAL -> MaterialTab()
+                ProjectTab.MATERIAL -> MaterialTab(p, onMaterial)
                 ProjectTab.ATTENDANCE -> AttendanceTab(p, onNewWorker, onAttendanceSettings)
                 else -> MoreTab(onReports, onFeed, onAttendanceSettings, onPlanned)
             }

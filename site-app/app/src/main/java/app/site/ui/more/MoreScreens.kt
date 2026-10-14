@@ -114,21 +114,6 @@ private fun MoreTile(item: MoreItem, modifier: Modifier) {
 }
 
 /** Material tab: the structure is in place; the screens come in phase 2 (see build-log.md). */
-@Composable
-fun MaterialTab() {
-    var side by rememberSaveable { mutableIntStateOf(0) }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    val buying = listOf(R.string.mat_requests, R.string.mat_deliveries, R.string.mat_received)
-    val stock = listOf(R.string.mat_stock, R.string.mat_transfers_out, R.string.mat_transfer_requests, R.string.mat_issued, R.string.mat_returns)
-    val labels = (if (side == 0) buying else stock).map { stringResource(it) }
-    Column(Modifier.fillMaxSize()) {
-        SegmentedControl(listOf(stringResource(R.string.mat_buying), stringResource(R.string.mat_stock_side)), side,
-            { side = it; tab = 0 }, Modifier.padding(Size.gutter))
-        Tabs(labels, tab.coerceAtMost(labels.lastIndex), { tab = it })
-        EmptyState(R.drawable.ic_package, stringResource(R.string.planned_title), stringResource(R.string.planned_material_body))
-    }
-}
-
 /** S27: what happened on this site, newest first. */
 @Composable
 fun FeedScreen(projectId: String, onBack: () -> Unit, onTask: (String) -> Unit) {

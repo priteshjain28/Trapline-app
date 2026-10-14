@@ -345,3 +345,113 @@ class LayoutEdges : FlowTest() {
         assertTrue(shows("#2 Brickwork level 3"))
     }
 }
+
+/** F03/F04: material in, material out, stock right. Seed: Cement 135 bag on Green Park Tower B. */
+class MaterialFlows : FlowTest() {
+    private fun openMaterial() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("Material"))
+        waitFor("135 bag on site")
+    }
+
+    private fun pickMaterial(label: String) {
+        tap(named("Material: Pick material"))
+        waitFor("Pick material")
+        tap(text(label))
+        compose.waitForIdle()
+    }
+
+    @Test fun m_H1_stockListShowsWhatIsOnSite() {
+        openMaterial()
+        assertTrue(shows("Red bricks"))
+        assertTrue(shows("2800 nos on site"))
+        assertAccessible("S15 on site")
+        tap(text("TMT bar"))
+        waitFor("History")
+        assertTrue("delivery in the history", shows("Received · delivery #2"))
+        assertAccessible("S16 material history")
+    }
+
+    @Test fun m_H2_addMaterialAlreadyOnSite() {
+        openMaterial()
+        tap(button("Add material"))
+        type("Material", "Binding wire")
+        tap(chip("kg"))
+        type("How much is on site now", "25")
+        assertAccessible("add material")
+        tap(button("Add material"))
+        waitFor("25 kg on site")
+    }
+
+    @Test fun m_H3_recordADelivery() {
+        openMaterial()
+        tap(tab("Buying"))
+        tap(tab("Received"))
+        waitFor("Delivery #2", substring = true)
+        tap(button("Record delivery"))
+        pickMaterial("Cement · OPC 53")
+        type("Quantity", "50")
+        type("Challan or bill number", "CH-1301")
+        assertAccessible("S14 record delivery")
+        tap(button("Save"))
+        waitFor("Delivery #3", substring = true)
+        tap(tab("Stock"))
+        waitFor("185 bag on site")
+    }
+
+    @Test fun m_H4_issueToATask() {
+        openMaterial()
+        tap(tab("Issued"))
+        waitFor("Issue #2", substring = true)
+        tap(button("Issue material"))
+        tap(named("For task: Pick a task"))
+        tap(text("#2 Brickwork level 3"))
+        pickMaterial("Cement · OPC 53")
+        type("Quantity", "35")
+        assertAccessible("S19 issue material")
+        tap(button("Issue material"))
+        waitFor("Issue #3", substring = true)
+        assertTrue(shows("For #2 Brickwork level 3", substring = true))
+        tap(tab("On site"))
+        waitFor("100 bag on site")
+    }
+
+    @Test fun m_E1_cantIssueMoreThanOnSite() {
+        openMaterial()
+        tap(tab("Issued"))
+        tap(button("Issue material"))
+        tap(named("For task: Pick a task"))
+        tap(text("#2 Brickwork level 3"))
+        pickMaterial("Cement · OPC 53")
+        type("Quantity", "500")
+        assertTrue(shows("That's more than the site holds"))
+        button("Issue material").assertIsNotEnabled()
+    }
+
+    @Test fun m_E2_countRecordsTheDifference() {
+        openMaterial()
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("Update") and androidx.compose.ui.test.hasClickAction())[0].let { it })
+        waitFor("Update Cement · OPC 53")
+        tap(tab("Counted"))
+        type("Counted", "130")
+        tap(button("Save"))
+        waitFor("130 bag on site")
+        tap(text("Cement"))
+        waitFor("Count corrected")
+        assertTrue(shows("−5 bag"))
+    }
+
+    @Test fun m_N1_deliveryNeedsMaterialAndQuantity() {
+        openMaterial()
+        tap(tab("Buying"))
+        tap(tab("Received"))
+        tap(button("Record delivery"))
+        button("Save").assertIsNotEnabled()
+        pickMaterial("River sand")
+        button("Save").assertIsNotEnabled()
+        type("Quantity", "0")
+        assertTrue(shows("Enter a number above zero"))
+        button("Save").assertIsNotEnabled()
+    }
+}

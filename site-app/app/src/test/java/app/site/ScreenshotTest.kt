@@ -50,6 +50,8 @@ class ScreenshotTest {
     private lateinit var towerId: String
     private lateinit var brickworkId: String
     private lateinit var officeId: String
+    private lateinit var cementId: String
+    private lateinit var office: app.site.core.model.Project
 
     @Before fun setUp() {
         container = AppContainer(ApplicationProvider.getApplicationContext(), clock, latencyMs = 0, forceDemo = true)
@@ -59,6 +61,8 @@ class ScreenshotTest {
             towerId = container.projects.projects().first().first { it.name == "Green Park Tower B" }.id
             brickworkId = container.tasks.tasks(towerId).first().first { it.number == 2 }.id
             officeId = container.projects.projects().first().first { it.name == "Site office renovation" }.id
+            cementId = container.materials.catalogue().first().first { it.name == "Cement" }.id
+            office = container.projects.projects().first().first { it.id == officeId }
         }
     }
 
@@ -90,7 +94,14 @@ class ScreenshotTest {
     @Test fun s08_tasksEmpty() = shot("S08-empty") { ProjectShell(officeId, ProjectTab.TASKS, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
     @Test fun s09_task() = shot("S09") { TaskDetailScreen(brickworkId, {}) }
     @Test fun s10_newTask() = shot("S10") { CreateTaskScreen(towerId, {}, {}) }
-    @Test fun s12_material() = shot("S12") { shell(ProjectTab.MATERIAL)() }
+    @Test fun s15_stock() = shot("S15") { shell(ProjectTab.MATERIAL)() }
+    // same state as the reference: a site with no deliveries yet
+    @Test fun s14_receivedEmpty() = shot("S14-empty") {
+        app.site.ui.material.MaterialTab(office, {}, startOnReceived = true)
+    }
+    @Test fun s14_recordDelivery() = shot("S14-new") { app.site.ui.material.ReceiveScreen(towerId, {}, {}) }
+    @Test fun s16_materialHistory() = shot("S16") { app.site.ui.material.MaterialDetailScreen(towerId, cementId, {}) }
+    @Test fun s19_issue() = shot("S19-new") { app.site.ui.material.IssueScreen(towerId, {}, {}) }
     @Test fun s21_attendance() = shot("S21") { shell(ProjectTab.ATTENDANCE)() }
     @Test fun s22_addWorker() = shot("S22") { AddWorkerScreen(towerId, {}) }
     @Test fun s24_attendanceSettings() = shot("S24") { AttendanceSettingsScreen(towerId, {}) }

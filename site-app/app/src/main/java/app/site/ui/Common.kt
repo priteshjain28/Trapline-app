@@ -20,6 +20,8 @@ fun errorRes(e: Throwable): Int = when (e) {
         AppError.Reason.NOT_POSITIVE -> R.string.err_not_positive
         AppError.Reason.WRONG_CODE -> R.string.err_wrong_code
         AppError.Reason.BAD_PHONE -> R.string.err_bad_phone
+        AppError.Reason.NOT_ENOUGH_STOCK -> R.string.err_not_enough_stock
+        AppError.Reason.IN_FUTURE -> R.string.err_in_future
     }
     is AppError.PlanLimit -> R.string.err_plan_limit_projects
     is AppError.OwnerMustTransfer -> R.string.err_owner_must_transfer

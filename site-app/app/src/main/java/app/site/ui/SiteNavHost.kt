@@ -15,6 +15,11 @@ import app.site.LocalContainer
 import app.site.ui.attendance.AddWorkerScreen
 import app.site.ui.attendance.AttendanceSettingsScreen
 import app.site.ui.auth.SignInScreen
+import app.site.ui.material.AddMaterialScreen
+import app.site.ui.material.IssueScreen
+import app.site.ui.material.MaterialDetailScreen
+import app.site.ui.material.MaterialNav
+import app.site.ui.material.ReceiveScreen
 import app.site.ui.more.FeedScreen
 import app.site.ui.more.PlannedScreen
 import app.site.ui.more.ProfileScreen
@@ -38,6 +43,10 @@ object Routes {
     const val ATTENDANCE_SETTINGS = "project/{pid}/settings/attendance"
     const val PROFILE = "profile"
     const val PLANNED = "planned/{sid}"
+    const val ADD_MATERIAL = "project/{pid}/material/new"
+    const val RECEIVE = "project/{pid}/material/receive"
+    const val ISSUE = "project/{pid}/material/issue"
+    const val MATERIAL = "project/{pid}/stock/{mid}"
 
     fun project(pid: String, tab: Int = 0) = "project/$pid?tab=$tab"
     fun newTask(pid: String) = "project/$pid/tasks/new"
@@ -47,6 +56,12 @@ object Routes {
     fun feed(pid: String) = "project/$pid/feed"
     fun attendanceSettings(pid: String) = "project/$pid/settings/attendance"
     fun planned(p: Planned) = "planned/${p.id}"
+    fun material(pid: String, nav: MaterialNav) = when (nav) {
+        MaterialNav.AddMaterial -> "project/$pid/material/new"
+        MaterialNav.Receive -> "project/$pid/material/receive"
+        MaterialNav.Issue -> "project/$pid/material/issue"
+        is MaterialNav.Detail -> "project/$pid/stock/${nav.materialId}"
+    }
 }
 
 /** Tab indexes inside a project (S05). */
@@ -104,7 +119,20 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                 onFeed = { nav.navigate(Routes.feed(projectId)) },
                 onAttendanceSettings = { nav.navigate(Routes.attendanceSettings(projectId)) },
                 onPlanned = { nav.navigate(Routes.planned(it)) },
+                onMaterial = { nav.navigate(Routes.material(projectId, it)) },
             )
+        }
+        composable(Routes.ADD_MATERIAL, listOf(pid)) { e ->
+            AddMaterialScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
+        }
+        composable(Routes.RECEIVE, listOf(pid)) { e ->
+            ReceiveScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
+        }
+        composable(Routes.ISSUE, listOf(pid)) { e ->
+            IssueScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
+        }
+        composable(Routes.MATERIAL, listOf(pid, navArgument("mid") { type = NavType.StringType })) { e ->
+            MaterialDetailScreen(e.arguments?.getString("pid").orEmpty(), e.arguments?.getString("mid").orEmpty(), onBack = { nav.popBackStack() })
         }
         composable(Routes.NEW_TASK, listOf(pid)) { e ->
             val projectId = e.arguments?.getString("pid").orEmpty()
