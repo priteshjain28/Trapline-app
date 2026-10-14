@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
@@ -239,16 +240,16 @@ fun SwitchRow(title: String, description: String?, checked: Boolean, onCheckedCh
 fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = SiteTheme.colors
     Box(
-        modifier.heightIn(min = Size.touchMin).selectable(selected, onClick = onClick, role = Role.Checkbox),
+        modifier.heightIn(min = Size.touchMin).widthIn(min = Size.touchMin).selectable(selected, onClick = onClick, role = Role.Checkbox),
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            Modifier.height(32.dp).clip(Radius.md)
+            Modifier.height(32.dp).widthIn(min = Size.touchMin).clip(Radius.md)
                 .background(if (selected) c.accentTint else c.bg)
                 .border(1.dp, if (selected) c.accent else c.borderInput, Radius.md)
                 .padding(horizontal = Space.s3),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Space.s1),
+            horizontalArrangement = Arrangement.spacedBy(Space.s1, Alignment.CenterHorizontally),
         ) {
             if (selected) SiteIcon(app.site.R.drawable.ic_check, null, tint = c.onAccentTint, size = 16.dp)
             Text(label, style = SiteTheme.type.xs.copy(fontWeight = FontWeight.W600), color = if (selected) c.onAccentTint else c.text)
