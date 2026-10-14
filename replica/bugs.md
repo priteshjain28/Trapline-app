@@ -7,7 +7,7 @@ data layer, fixed clock Tue 13 Oct 2026 09:30 IST. Only reproduced bugs are list
 | --- | --- | --- |
 | S1 | 0 | 0 |
 | S2 | 0 | 1 |
-| S3 | 0 | 4 |
+| S3 | 0 | 6 |
 | S4 | 0 | 0 |
 
 ### BUG-001: demo lets a free company add a 4th active site; the server refuses it
@@ -96,6 +96,39 @@ attendance date 320×19, project switcher 274×42
 Evidence: audit output in `f10_H1`, `f04_H1`, `f02_H1`, `f07_E2`, `f08_H1` (CI run 38588217249)
 Status: fixed in 08f19be (same look, 48dp tappable area)
 
+### BUG-006: the selected sub-tab isn't marked
+
+- Severity: S3
+- Flow / case: F04 / L-1 (seen in screenshots)
+- Screen: S21, S23, S12 (every screen with Tabs)
+- Build: ae36acc  Device: Robolectric phone, 360dp and 448dp
+
+Steps
+1. Green Park Tower B → Attendance
+
+Expected: "Register" underlined as the current sub-tab
+Actual: Register and Wages look the same; no underline
+Evidence: replica/clone-screens/S21.png, replica/test-screens/narrow-360dp-attendance.png (at ae36acc)
+Suspected cause: the 3dp underline used fillMaxWidth inside a horizontally scrolling row, so its width was 0
+Status: fixed in 58ad75d (confirm in the re-recorded S21 screenshot)
+
+### BUG-007: layout breaks at 200% text size
+
+- Severity: S3
+- Flow / case: L-2
+- Screen: S04, S08, bottom navigation
+- Build: ae36acc  Device: Robolectric phone, font scale 2.0
+
+Steps
+1. Phone settings → largest text size
+2. Open Projects, then a project → Tasks
+
+Expected: text wraps or ends in "…"; nothing collides
+Actual: bottom-nav labels run together ("MaterialAttenda"), dates cut mid-word ("due 11", "13 Apr" with no year
+and no ellipsis), avatar initials spill out of the circle
+Evidence: replica/test-screens/font-200-projects.png, font-200-tasks.png (at ae36acc)
+Status: fixed in 58ad75d (nav labels stop growing at 1.3x, dates wrap to two lines, initials sized to the circle)
+
 ## To check (not reproduced)
 
 - Photo remove button on a pending update is 32dp (TaskDetailScreen `PhotoStrip`). Needs a test that picks a photo.
@@ -103,4 +136,5 @@ Status: fixed in 08f19be (same look, 48dp tappable area)
   member account (real backend).
 - Dates use the phone's time zone, not the site's. A site engineer travelling outside India would log against the
   wrong day near midnight.
-- `f02_H1` renders the PDF with Android's PdfDocument under Robolectric; confirm on a real phone (manual checklist).
+- The report PDF can't be made under Robolectric (no native PdfDocument), so `f02_H1` skips that step. Make a report on
+  a real phone (manual checklist). Report failures are now logged (d92e614) instead of swallowed.
