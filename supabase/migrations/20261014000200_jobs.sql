@@ -14,8 +14,17 @@ begin
   perform cron.schedule('daily-nudge', '0 13 * * *', $job$ select app.daily_nudge() $job$);
   -- 06:00 IST: tasks that went overdue yesterday
   perform cron.schedule('overdue-tasks', '30 0 * * *', $job$ select app.overdue_task_alerts() $job$);
-  -- 02:00 IST: drop expired report rows (their PDFs are removed by the cleanup function, see backend.md)
-  perform cron.schedule('expire-reports', '30 20 * * *', $job$ delete from public.reports where expires_at < now() $job$);
+  -- 02:00 IST: expired reports. The cleanup function removes the PDF from Storage, then the row.
+  -- Needs pg_net and two Vault secrets (project_url, cron_secret); see replica/backend.md.
+  if exists (select 1 from pg_available_extensions where name = 'pg_net') then
+    create extension if not exists pg_net;
+    perform cron.schedule('expire-reports', '30 20 * * *', $job$
+      select net.http_post(
+        url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/cleanup',
+        headers := jsonb_build_object('x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')),
+        body := '{}'::jsonb)
+    $job$);
+  end if;
   -- hourly: forget old rate-limit windows and read notifications older than 60 days
   perform cron.schedule('housekeeping', '7 * * * *', $job$
     delete from public.rate_limits where window_start < now() - interval '1 day';
