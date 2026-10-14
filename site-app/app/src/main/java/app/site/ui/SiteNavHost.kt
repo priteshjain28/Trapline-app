@@ -48,7 +48,7 @@ object Routes {
     const val PLANNED = "planned/{sid}"
     const val ADD_MATERIAL = "project/{pid}/material/new"
     const val RECEIVE = "project/{pid}/material/receive"
-    const val ISSUE = "project/{pid}/material/issue"
+    const val ISSUE_MATERIAL = "project/{pid}/material/issue"
     const val MATERIAL = "project/{pid}/stock/{mid}"
     const val GALLERY = "project/{pid}/gallery"
     const val TEAM = "project/{pid}/team"
@@ -189,7 +189,7 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
         composable(Routes.RECEIVE, listOf(pid)) { e ->
             ReceiveScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
         }
-        composable(Routes.ISSUE, listOf(pid)) { e ->
+        composable(Routes.ISSUE_MATERIAL, listOf(pid)) { e ->
             IssueScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
         }
         composable(Routes.MATERIAL, listOf(pid, navArgument("mid") { type = NavType.StringType })) { e ->
