@@ -2,6 +2,7 @@ package app.site.flows
 
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
@@ -317,8 +318,7 @@ class ReportAndFeedFlows : FlowTest() {
         tap(chip("Labour"))
         // material alone is still a report
         button("Create report").assertIsEnabled()
-        scrollTo("Material")
-        tap(chip("Material"))
+        tap(chip("Material").performScrollTo())
         button("Create report").assertIsNotEnabled()
     }
 
