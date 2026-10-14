@@ -155,7 +155,9 @@ private fun InviteSheet(projectId: String, onDismiss: () -> Unit, onSent: (Boole
             verticalArrangement = Arrangement.spacedBy(Space.s4),
         ) {
             Text(stringResource(R.string.action_invite), style = SiteTheme.type.lg, color = SiteTheme.colors.text)
-            generalError(error)?.let { InfoBanner(it, tone = Tone.DANGER, icon = R.drawable.ic_circle_alert) }
+            // offline is not "saved for later" here: nothing is sent until there's a connection
+            (if (error is app.site.core.data.AppError.Offline) stringResource(R.string.err_invite_offline) else generalError(error))
+                ?.let { InfoBanner(it, tone = Tone.DANGER, icon = R.drawable.ic_circle_alert) }
             SiteTextField(phone, { phone = it; error = null }, stringResource(R.string.field_their_phone), keyboardType = KeyboardType.Phone,
                 prefix = "+91", error = fieldError(error, "phone"))
             SectionLabel(stringResource(R.string.field_role))

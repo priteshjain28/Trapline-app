@@ -413,6 +413,7 @@
     <string name="invite_sent_sms">Invite sent by SMS.</string>
     <string name="invite_saved">Invite saved. They join when they sign in with this number.</string>
     <string name="team_change_role">Change role</string>
+    <string name="err_invite_offline">Inviting needs a connection: the SMS goes from our server. Try again when you\'re online.</string>
     <string name="err_already_member">They\'re already on this site</string>
 
     <!-- profile email, company (S29), site photo -->
