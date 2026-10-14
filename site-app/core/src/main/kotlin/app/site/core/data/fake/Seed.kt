@@ -83,7 +83,8 @@ internal object Seed {
         events += ActivityEvent(newId(), tower.id, null, "", ActivityVerb.CREATED_PROJECT, tower.id, tower.name, at(tower.startDate!!, 9))
         events += ActivityEvent(newId(), tower.id, ravi.id, ravi.name, ActivityVerb.JOINED, null, "engineer", at(tower.startDate, 10))
         tasks.filter { it.projectId == tower.id }.forEach {
-            events += ActivityEvent(newId(), tower.id, meena.id, meena.name, ActivityVerb.CREATED_TASK, it.id, it.name, at(it.startDate ?: today, 9))
+            events += ActivityEvent(newId(), tower.id, meena.id, meena.name, ActivityVerb.CREATED_TASK, it.id, it.name,
+                at(minOf(it.startDate ?: today, today.minusDays(1)).minusDays(1), 9))
         }
         updates.filter { it.projectId == tower.id }.forEach { u ->
             val name = if (u.authorId == ravi.id) ravi.name else meena.name

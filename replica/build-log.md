@@ -1,6 +1,6 @@
 # Build log: site app
 
-Code: `site-app/` (Kotlin + Jetpack Compose). `:core` is pure Kotlin (models, data layer, rules, 14 tests).
+Code: `site-app/` (Kotlin + Jetpack Compose). `:core` is pure Kotlin (models, data layer, rules, 15 tests).
 `:app` is the Android app, built by `.github/workflows/site-app.yml`, which also records screenshots into
 `replica/clone-screens/`. The data layer is an in-memory fake (`FakeBackend`) behind the same interfaces
 Room + Supabase will implement, so `/replica-backend` changes `AppContainer` and no screen code.
@@ -29,7 +29,8 @@ Room + Supabase will implement, so `/replica-backend` changes `AppContainer` and
 | S02, S11, S13–S20, S26, S29–S38 | – | not started | – | – |
 
 Built: 15 screens (12 done, 3 partial) + 1 stub tab, out of 38 in the recon.
-Must-haves: 18 of 33 done (`parity.py`: 47/100 overall).
+Must-haves: 18 of 33 done (`parity.py`: 47/100 overall). CI green on 2026-10-14: 15 core tests, debug APK,
+15 screenshots in `replica/clone-screens/` (1344 px wide, same as the reference).
 
 ## Decisions and notes
 

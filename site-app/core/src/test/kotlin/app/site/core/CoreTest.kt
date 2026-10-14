@@ -106,6 +106,13 @@ class FakeBackendTest {
         assertEquals("Sharma Constructions", s.org.name)
     }
 
+    @Test fun seedFeedIsNeverInTheFuture() = runTest {
+        val b = backend()
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val now = java.time.Instant.now(clock)
+        assertTrue(b.feed(tower.id).first().all { !it.createdAt.isAfter(now) })
+    }
+
     @Test fun seedHasABusySite() = runTest {
         val b = backend()
         val projects = b.projects().first()
