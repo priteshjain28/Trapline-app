@@ -1,0 +1,41 @@
+-- Version 7 -> 8: payables, payments and expenses (S23, S26).
+
+-- Money: managers and accountants only (the server sends these rows to no one else).
+CREATE TABLE payable (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  kind TEXT NOT NULL,
+  worker_id TEXT,
+  title TEXT,
+  period_start TEXT,
+  period_end TEXT,
+  amount_paise INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX payable_project ON payable(project_id);
+
+CREATE TABLE payment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  payable_id TEXT NOT NULL,
+  amount_paise INTEGER NOT NULL,
+  paid_on TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  reference TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX payment_payable ON payment(payable_id);
+
+CREATE TABLE expense (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount_paise INTEGER NOT NULL,
+  spent_on TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX expense_project ON expense(project_id);
+

@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -65,6 +66,9 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
     var attendance by rememberSaveable { mutableStateOf(true) }
     var wages by rememberSaveable { mutableStateOf(false) }
     var material by rememberSaveable { mutableStateOf(true) }
+    var issues by rememberSaveable { mutableStateOf(true) }
+    var payments by rememberSaveable { mutableStateOf(false) }
+    val canSeeMoney by remember(project.id) { container.money.canSeeMoney(project.id) }.collectAsStateWithLifecycle(initialValue = false)
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
 
@@ -73,7 +77,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
         else -> today.minusDays(d) to today
     }
     // photos ride on work done, so they don't count on their own
-    val nothingPicked = !updates && !attendance && !material
+    val nothingPicked = !updates && !attendance && !material && !issues && !(payments && canSeeMoney)
 
     Column(Modifier.fillMaxSize()) {
         Column(
@@ -115,6 +119,10 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             CheckRow(stringResource(R.string.part_wages), wages && attendance, { wages = it }, description = stringResource(R.string.part_wages_body),
                 enabled = attendance)
             CheckRow(stringResource(R.string.part_material), material, { material = it }, description = stringResource(R.string.part_material_body))
+            CheckRow(stringResource(R.string.part_issues), issues, { issues = it }, description = stringResource(R.string.part_issues_body))
+            if (canSeeMoney) {
+                CheckRow(stringResource(R.string.part_payments), payments, { payments = it }, description = stringResource(R.string.part_payments_body))
+            }
             Text(stringResource(R.string.report_more_parts_later), Modifier.padding(vertical = Space.s3),
                 style = SiteTheme.type.xs, color = SiteTheme.colors.textMuted)
         }
@@ -123,7 +131,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             PrimaryButton(stringResource(R.string.action_create_report), {
                 busy = true
                 scope.launch {
-                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance, material)
+                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance, material, issues, payments && canSeeMoney)
                     container.reportService.create(NewReport(project.id, type, range.first, range.second, parts))
                         .onSuccess { error = null; onReports() }
                         .onFailure { error = it }

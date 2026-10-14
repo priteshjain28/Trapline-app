@@ -319,6 +319,7 @@ class ReportAndFeedFlows : FlowTest() {
         // material alone is still a report
         button("Create report").assertIsEnabled()
         tap(chip("Material").performScrollTo())
+        tap(chip("Issues").performScrollTo())
         button("Create report").assertIsNotEnabled()
     }
 
@@ -645,5 +646,57 @@ class IssueFlows : FlowTest() {
         openIssues()
         tap(button("Raise issue"))
         button("Raise issue").assertIsNotEnabled()
+    }
+}
+
+/** F05/F06: wages to payables, paying them, and what the site has cost. Seed: crane hire ₹18,000 with ₹10,000 paid. */
+class MoneyFlows : FlowTest() {
+    @Test fun p_H1_recordWagesAndPayOne() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("Attendance"))
+        tap(tab("Wages"))
+        waitFor("Record as payable")
+        assertAccessible("S23 wages")
+        tap(button("Record as payable"))
+        waitFor("Recorded 5 payables.")
+        assertTrue(shows("Every day in this period is already on a payable."))
+        scrollTo("Recorded")
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("Pay") and androidx.compose.ui.test.hasClickAction())[0])
+        waitFor("Pay", substring = true)
+        assertAccessible("pay sheet")
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("Pay") and androidx.compose.ui.test.hasClickAction()).let { it[it.fetchSemanticsNodes().size - 1] })
+        waitFor("Paid")
+    }
+
+    @Test fun p_H2_expensesAddSpendAndPayTheCrane() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Expenses"))
+        waitFor("Spent on this site")
+        assertTrue(shows("₹19,250"))
+        assertAccessible("S26 expenses")
+        tap(button("Add spend"))
+        type("Amount", "750")
+        type("Notes", "Diesel for the mixer")
+        tap(button("Save"))
+        waitFor("Diesel for the mixer")
+        assertTrue(shows("₹20,000"))
+        tap(button("Pay"))
+        type("Reference (optional)", "Cash, site office")
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("Pay") and androidx.compose.ui.test.hasClickAction()).let { it[it.fetchSemanticsNodes().size - 1] })
+        waitFor("Paid")
+    }
+
+    @Test fun p_N1_cantPayMoreThanDue() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Expenses"))
+        tap(button("Pay"))
+        field("Amount").performTextClearance()
+        type("Amount", "9000")
+        assertTrue(shows("That's more than what's still due"))
     }
 }

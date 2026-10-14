@@ -105,6 +105,7 @@ class ScreenshotTest {
     @Test fun s36_team() = shot("S36") { app.site.ui.team.TeamScreen(towerId, {}) }
     @Test fun s29_company() = shot("S29") { app.site.ui.more.CompanyScreen({}) }
     @Test fun s31_issues() = shot("S31") { app.site.ui.issues.IssuesScreen(towerId, {}, {}, {}) }
+    @Test fun s26_expenses() = shot("S26") { app.site.ui.money.ExpensesScreen(towerId, {}) }
     @Test fun s19_issue() = shot("S19-new") { app.site.ui.material.IssueScreen(towerId, {}, {}) }
     @Test fun s21_attendance() = shot("S21") { shell(ProjectTab.ATTENDANCE)() }
     @Test fun s22_addWorker() = shot("S22") { AddWorkerScreen(towerId, {}) }

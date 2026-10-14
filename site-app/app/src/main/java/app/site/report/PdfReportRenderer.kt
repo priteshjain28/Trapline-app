@@ -57,6 +57,8 @@ class PdfReportRenderer(private val context: Context) {
                 else -> summary(w, content)
             }
             material(w, content)
+            issues(w, content)
+            payments(w, content)
             w.finish()
             out.outputStream().use { doc.writeTo(it) }
         } finally {
@@ -117,6 +119,29 @@ class PdfReportRenderer(private val context: Context) {
         for (m in c.materials) {
             w.text("• ${m.name} — " + s(R.string.report_pdf_material_row, Format.qty(m.received), Format.qty(m.out), Format.qty(m.onSiteNow), m.uom), body)
         }
+    }
+
+    private fun issues(w: Writer, c: ReportContent) {
+        if (c.issues.isEmpty()) return
+        w.ensure(60f)
+        w.gap(6f)
+        w.text(s(R.string.report_pdf_issues), h2)
+        for (i in c.issues) {
+            val num = i.number?.let { "#$it " } ?: ""
+            val state = s(if (i.open) R.string.report_pdf_issue_open else R.string.report_pdf_issue_fixed)
+            val due = i.due?.takeIf { i.open }?.let { " · " + s(R.string.issue_due, Format.short(it)) } ?: ""
+            w.text("• $num${i.title} — $state$due", body)
+        }
+    }
+
+    private fun payments(w: Writer, c: ReportContent) {
+        val p = c.payments ?: return
+        if (p.billedPaise == 0L && p.paidPaise == 0L && p.stillDuePaise == 0L) return
+        w.ensure(60f)
+        w.gap(6f)
+        w.text(s(R.string.report_pdf_payments), h2)
+        w.text(s(R.string.report_pdf_payments_totals, Format.rupees(p.billedPaise), Format.rupees(p.paidPaise), Format.rupees(p.stillDuePaise)), body)
+        for (l in p.lines) w.text("• ${Format.short(l.paidOn)} — ${l.title}: ${Format.rupees(l.amountPaise)}", muted)
     }
 
     private fun summary(w: Writer, c: ReportContent) {

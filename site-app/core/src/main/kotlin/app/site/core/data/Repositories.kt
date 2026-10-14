@@ -36,7 +36,7 @@ sealed class AppError(message: String) : Exception(message) {
     /** The only owner can't leave while other people are in the organisation. */
     data object OwnerMustTransfer : AppError("owner must transfer")
 
-    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE, ALREADY_MEMBER, BAD_EMAIL }
+    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE, ALREADY_MEMBER, BAD_EMAIL, MORE_THAN_DUE }
 }
 
 interface SessionRepository {
@@ -185,4 +185,26 @@ interface IssueRepository {
     suspend fun raise(input: app.site.core.model.NewIssue): Result<app.site.core.model.Issue>
     suspend fun setStatus(issueId: String, status: app.site.core.model.IssueStatus): Result<Unit>
     suspend fun comment(issueId: String, body: String): Result<app.site.core.model.Comment>
+}
+
+/** Bills to pay, payments against them, and other spend. Managers and accountants only. */
+interface MoneyRepository {
+    /** Whether the signed-in user may see money on this site. Screens hide money when false. */
+    fun canSeeMoney(projectId: String): Flow<Boolean>
+    /** Newest first; void ones left out. */
+    fun payables(projectId: String): Flow<List<app.site.core.model.Payable>>
+    fun payments(payableId: String): Flow<List<app.site.core.model.Payment>>
+    /** Wages per worker for the period, leaving out days already on a payable (same rule as the server). */
+    fun previewWages(projectId: String, from: java.time.LocalDate, to: java.time.LocalDate): Flow<List<app.site.core.model.WagePreview>>
+    /** One payable per worker from the preview. Returns how many were recorded. */
+    suspend fun recordWages(projectId: String, from: java.time.LocalDate, to: java.time.LocalDate): Result<Int>
+    suspend fun addCustomPayable(projectId: String, title: String, amountPaise: Long): Result<app.site.core.model.Payable>
+    /** Refused when more than what's still due. */
+    suspend fun pay(payableId: String, amountPaise: Long, paidOn: java.time.LocalDate, mode: app.site.core.model.PaymentMode,
+                    reference: String? = null): Result<Unit>
+    fun expenses(projectId: String): Flow<List<app.site.core.model.Expense>>
+    suspend fun addExpense(projectId: String, category: app.site.core.model.ExpenseCategory, amountPaise: Long,
+                           spentOn: java.time.LocalDate, note: String?): Result<app.site.core.model.Expense>
+    /** Spend in the period by bucket; null bounds mean all time. */
+    fun spend(projectId: String, from: java.time.LocalDate? = null, to: java.time.LocalDate? = null): Flow<app.site.core.model.SpendSummary>
 }

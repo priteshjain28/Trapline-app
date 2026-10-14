@@ -129,6 +129,14 @@ internal object Seed {
             at(today.minusDays(2), 10))
         events += ActivityEvent(newId(), tower.id, ravi.id, ravi.name, ActivityVerb.RAISED_ISSUE, crack.id, crack.title, crack.createdAt)
 
+        // money: a part-paid crane bill and a petty-cash spend on the tower
+        val crane = app.site.core.model.Payable(newId(), tower.id, 1, app.site.core.model.PayableKind.CUSTOM, 18_000_00,
+            title = "Crane hire, 2 days", createdAt = at(today.minusDays(5), 12))
+        val craneAdvance = app.site.core.model.Payment(newId(), crane.id, 10_000_00, today.minusDays(5), app.site.core.model.PaymentMode.UPI,
+            "UPI ref 4021", at(today.minusDays(5), 12))
+        val tea = app.site.core.model.Expense(newId(), tower.id, app.site.core.model.ExpenseCategory.PETTY_SPEND, 1_250_00, today.minusDays(3),
+            "Tea and snacks for the slab crew", at(today.minusDays(3), 17))
+
         val projects = listOf(tower, villas, office).map { p ->
             p.copy(progressPct = Progress.project(tasks.filter { it.projectId == p.id }))
         }
@@ -141,7 +149,10 @@ internal object Seed {
             workers = workers.associateBy { it.id },
             attendance = attendance,
             events = events,
-            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1, "grns|${tower.id}" to 2, "issues|${tower.id}" to 2, "site-issues|${tower.id}" to 2),
+            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1, "grns|${tower.id}" to 2, "issues|${tower.id}" to 2, "site-issues|${tower.id}" to 2, "payables|${tower.id}" to 1),
+            payables = mapOf(crane.id to crane),
+            payments = mapOf(craneAdvance.id to craneAdvance),
+            expenses = mapOf(tea.id to tea),
             siteIssues = listOf(crack, water).associateBy { it.id },
             comments = mapOf(crackReply.id to crackReply),
             materials = materials.associateBy { it.id },

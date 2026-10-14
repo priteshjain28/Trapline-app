@@ -66,7 +66,7 @@ class FakeBackend(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository, app.site.core.data.MoneyRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -105,6 +105,9 @@ class FakeBackend(
         /** Problems raised on site (S31); [issues] above is material issued to tasks. */
         val siteIssues: Map<String, app.site.core.model.Issue> = emptyMap(),
         val comments: Map<String, app.site.core.model.Comment> = emptyMap(),
+        val payables: Map<String, app.site.core.model.Payable> = emptyMap(),
+        val payments: Map<String, app.site.core.model.Payment> = emptyMap(),
+        val expenses: Map<String, app.site.core.model.Expense> = emptyMap(),
     )
 
     /** A stock_adjustments row: [qty] is signed, like the server's. */
@@ -153,6 +156,9 @@ class FakeBackend(
     }
 
     override fun signOut() { _session.value = null }
+
+    /** Demo and tests only: see the app as someone with another company role. */
+    fun demoSetRole(role: OrgRole) { _session.value = _session.value?.copy(orgRole = role) }
 
     override suspend fun completeProfile(name: String, orgName: String?): Result<Session> {
         val current = _session.value ?: return Result.failure(AppError.NotAllowed)
@@ -675,6 +681,118 @@ class FakeBackend(
         val c = app.site.core.model.Comment(newId(), issueId, by.id, b, clock.instant())
         state.update { it.copy(comments = it.comments + (c.id to c)) }
         return Result.success(c)
+    }
+
+    // ------------------------------------------------------------------ money
+
+    private fun seesMoney(s: State, projectId: String): Boolean {
+        val me = _session.value?.user?.id ?: return false
+        val org = orgRoleOf(s, me)
+        val role = s.projectMembers[projectId]?.get(me)
+        return org == OrgRole.OWNER || org == OrgRole.ADMIN ||
+            role == app.site.core.model.ProjectRole.MANAGER || role == app.site.core.model.ProjectRole.ACCOUNTANT
+    }
+
+    private fun withPayments(s: State, p: app.site.core.model.Payable): app.site.core.model.Payable {
+        val paid = s.payments.values.filter { it.payableId == p.id }.sumOf { it.amountPaise }
+        return p.copy(paidPaise = paid, status = app.site.core.logic.Money.status(p.amountPaise, paid, p.status == app.site.core.model.PayableStatus.VOID))
+    }
+
+    private fun livePayables(s: State, projectId: String) =
+        s.payables.values.filter { it.projectId == projectId }.map { withPayments(s, it) }.filter { it.status != app.site.core.model.PayableStatus.VOID }
+
+    override fun canSeeMoney(projectId: String): Flow<Boolean> = combine(state, _session) { s, _ -> seesMoney(s, projectId) }
+
+    override fun payables(projectId: String): Flow<List<app.site.core.model.Payable>> = combine(state, _session) { s, _ ->
+        if (!seesMoney(s, projectId)) emptyList() else livePayables(s, projectId).sortedByDescending { it.createdAt }
+    }
+
+    override fun payments(payableId: String): Flow<List<app.site.core.model.Payment>> =
+        state.map { s -> s.payments.values.filter { it.payableId == payableId }.sortedByDescending { it.createdAt } }
+
+    private fun preview(s: State, projectId: String, from: LocalDate, to: LocalDate): List<app.site.core.model.WagePreview> {
+        val p = s.projects[projectId] ?: return emptyList()
+        return app.site.core.logic.Money.previewWages(s.workers.values.filter { it.projectId == projectId }, s.attendance.values.filter { it.projectId == projectId },
+            p.shiftHours, from, to, livePayables(s, projectId))
+    }
+
+    override fun previewWages(projectId: String, from: LocalDate, to: LocalDate): Flow<List<app.site.core.model.WagePreview>> =
+        state.map { s -> preview(s, projectId, from, to) }
+
+    private fun moneyGuard(projectId: String): Result<Unit> =
+        if (seesMoney(state.value, projectId)) Result.success(Unit) else Result.failure(AppError.NotAllowed)
+
+    private fun nextPayableNumber(s: State, projectId: String) = (s.counters["payables|$projectId"] ?: 0) + 1
+
+    override suspend fun recordWages(projectId: String, from: LocalDate, to: LocalDate): Result<Int> {
+        io()
+        moneyGuard(projectId).getOrElse { return Result.failure(it) }
+        Validate.range(from, to).getOrElse { return Result.failure(it) }
+        Validate.notFuture(to, today()).getOrElse { return Result.failure(it) }
+        val by = me()
+        val lines = preview(state.value, projectId, from, to)
+        if (lines.isEmpty()) return Result.success(0)
+        state.update { s ->
+            var n = nextPayableNumber(s, projectId) - 1
+            val made = lines.map { l ->
+                n += 1
+                app.site.core.model.Payable(newId(), projectId, n, app.site.core.model.PayableKind.ATTENDANCE, l.amountPaise,
+                    workerId = l.worker.id, periodStart = from, periodEnd = to, createdAt = clock.instant())
+            }
+            s.copy(payables = s.payables + made.associateBy { it.id }, counters = s.counters + ("payables|$projectId" to n))
+        }
+        return Result.success(lines.size).also { by.id }
+    }
+
+    override suspend fun addCustomPayable(projectId: String, title: String, amountPaise: Long): Result<app.site.core.model.Payable> {
+        io()
+        moneyGuard(projectId).getOrElse { return Result.failure(it) }
+        val t = title.trim()
+        if (t.isEmpty()) return Result.failure(AppError.Invalid("title", AppError.Reason.REQUIRED))
+        if (t.length > app.site.core.logic.Money.TITLE_MAX) return Result.failure(AppError.Invalid("title", AppError.Reason.TOO_LONG))
+        if (amountPaise <= 0 || amountPaise > app.site.core.logic.Money.MAX_PAISE) return Result.failure(AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE))
+        var made: app.site.core.model.Payable? = null
+        state.update { s ->
+            val n = nextPayableNumber(s, projectId)
+            val p = app.site.core.model.Payable(newId(), projectId, n, app.site.core.model.PayableKind.CUSTOM, amountPaise, title = t, createdAt = clock.instant())
+            made = p
+            s.copy(payables = s.payables + (p.id to p), counters = s.counters + ("payables|$projectId" to n))
+        }
+        return Result.success(made!!)
+    }
+
+    override suspend fun pay(payableId: String, amountPaise: Long, paidOn: LocalDate, mode: app.site.core.model.PaymentMode,
+                             reference: String?): Result<Unit> {
+        io()
+        val p = state.value.payables[payableId]?.let { withPayments(state.value, it) } ?: return Result.failure(AppError.NotAllowed)
+        moneyGuard(p.projectId).getOrElse { return Result.failure(it) }
+        if (amountPaise <= 0) return Result.failure(AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE))
+        if (amountPaise > p.duePaise) return Result.failure(AppError.Invalid("amount", AppError.Reason.MORE_THAN_DUE))
+        Validate.notFuture(paidOn, today()).getOrElse { return Result.failure(it) }
+        val pay = app.site.core.model.Payment(newId(), payableId, amountPaise, paidOn, mode, reference?.trim()?.ifBlank { null }, clock.instant())
+        state.update { it.copy(payments = it.payments + (pay.id to pay)) }
+        return Result.success(Unit)
+    }
+
+    override fun expenses(projectId: String): Flow<List<app.site.core.model.Expense>> = combine(state, _session) { s, _ ->
+        if (!seesMoney(s, projectId)) emptyList()
+        else s.expenses.values.filter { it.projectId == projectId }.sortedWith(compareByDescending<app.site.core.model.Expense> { it.spentOn }.thenByDescending { it.createdAt })
+    }
+
+    override suspend fun addExpense(projectId: String, category: app.site.core.model.ExpenseCategory, amountPaise: Long, spentOn: LocalDate,
+                                    note: String?): Result<app.site.core.model.Expense> {
+        io()
+        moneyGuard(projectId).getOrElse { return Result.failure(it) }
+        if (amountPaise <= 0 || amountPaise > app.site.core.logic.Money.MAX_PAISE) return Result.failure(AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE))
+        Validate.notFuture(spentOn, today()).getOrElse { return Result.failure(it) }
+        val e = app.site.core.model.Expense(newId(), projectId, category, amountPaise, spentOn, note?.trim()?.take(500)?.ifBlank { null }, clock.instant())
+        state.update { it.copy(expenses = it.expenses + (e.id to e)) }
+        return Result.success(e)
+    }
+
+    override fun spend(projectId: String, from: LocalDate?, to: LocalDate?): Flow<app.site.core.model.SpendSummary> = combine(state, _session) { s, _ ->
+        if (!seesMoney(s, projectId)) app.site.core.model.SpendSummary(emptyMap())
+        else app.site.core.logic.Money.spend(livePayables(s, projectId), s.expenses.values.filter { it.projectId == projectId }, from, to, clock.zone)
     }
 
     // ------------------------------------------------------------------ feed

@@ -167,3 +167,29 @@ class MaterialReportTest {
         assertTrue(build(today.minusDays(7), app.site.core.model.ReportParts(material = false)).materials.isEmpty())
     }
 }
+
+class IssueAndPaymentReportTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun reportHasIssuesAndPayments() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val today = b.today()
+        val issues = b.siteIssues(tower.id).first()
+        val payables = b.payables(tower.id).first().map { Triple(it, b.payments(it.id).first(), it.title ?: "") }
+        fun build(from: java.time.LocalDate, parts: app.site.core.model.ReportParts) =
+            app.site.core.logic.ReportBuilder.build(tower, app.site.core.model.ReportType.SUMMARY, from, today, parts,
+                emptyList(), emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), issues, payables, clock.zone)
+        val week = build(today.minusDays(6), app.site.core.model.ReportParts(payments = true))
+        // the crack is open; the tanker was fixed 8 days ago, before this week
+        assertEquals(listOf("Hairline cracks in plaster near the lift lobby"), week.issues.map { it.title })
+        assertTrue(week.issues.single().open && week.issues.single().raisedInPeriod)
+        assertEquals(2, build(today.minusDays(9), app.site.core.model.ReportParts()).issues.size)
+        val pay = week.payments!!
+        assertEquals(18_000_00L, pay.billedPaise)
+        assertEquals(10_000_00L, pay.paidPaise)
+        assertEquals(8_000_00L, pay.stillDuePaise)
+        assertEquals(null, build(today.minusDays(6), app.site.core.model.ReportParts()).payments, "payments are off by default")
+    }
+}

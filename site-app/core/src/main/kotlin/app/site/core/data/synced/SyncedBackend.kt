@@ -120,7 +120,7 @@ class SyncedBackend(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository, app.site.core.data.MoneyRepository {
 
     private val q = db.siteQueries
 
@@ -135,6 +135,7 @@ class SyncedBackend(
             "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
             "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum, "project_members" to q::deleteProjectMember,
             "task_categories" to q::deleteCategory, "issues" to q::deleteIssueRow, "comments" to q::deleteComment,
+            "payables" to q::deletePayable, "payments" to q::deletePayment, "expenses" to q::deleteExpense,
         ),
         restore = ::restore,
     )
@@ -567,7 +568,7 @@ class SyncedBackend(
     }
 
     private fun partsJson(p: ReportParts) = buildJsonObject {
-        put("task_updates", p.taskUpdates); put("photos", p.photos); put("attendance", p.attendance); put("wages", p.wages); put("material", p.material)
+        put("task_updates", p.taskUpdates); put("photos", p.photos); put("attendance", p.attendance); put("wages", p.wages); put("material", p.material); put("issues", p.issues); put("payments", p.payments)
     }
 
     private fun report(r: ReportRow): Report {
@@ -575,7 +576,8 @@ class SyncedBackend(
         return Report(
             r.id, r.project_id, if (r.type == "summary") ReportType.SUMMARY else ReportType.DETAILED,
             LocalDate.parse(r.from_date), LocalDate.parse(r.to_date),
-            ReportParts(parts.bool("task_updates", true), parts.bool("photos", true), parts.bool("attendance", true), parts.bool("wages", false), parts.bool("material", false)),
+            ReportParts(parts.bool("task_updates", true), parts.bool("photos", true), parts.bool("attendance", true), parts.bool("wages", false), parts.bool("material", false),
+                parts.bool("issues", false), parts.bool("payments", false)),
             ReportStatus.entries.firstOrNull { it.name.equals(r.status, true) } ?: ReportStatus.QUEUED,
             SyncEngine.parseInstant(r.created_at), SyncEngine.parseInstant(r.expires_at), r.local_file,
         )
@@ -939,6 +941,147 @@ class SyncedBackend(
         app.site.core.model.Comment(row.id, issueId, user.id, b, SyncEngine.parseInstant(row.created_at))
     }
 
+    // ================================================================ money
+
+    private fun seesMoney(projectId: String, session: Session?): Boolean {
+        val r = session?.orgRole
+        if (r == OrgRole.OWNER || r == OrgRole.ADMIN) return true
+        val me = session?.user?.id ?: return false
+        return role(q.projectMemberOne(projectId, me).executeAsOneOrNull()?.role) in setOf(ProjectRole.MANAGER, ProjectRole.ACCOUNTANT)
+    }
+
+    override fun canSeeMoney(projectId: String): Flow<Boolean> =
+        combine(_session, q.projectMembers(projectId).asFlow().mapToList(io)) { session, _ -> seesMoney(projectId, session) }
+
+    private fun payableOf(id: String, projectId: String, number: Long?, kind: String, workerId: String?, title: String?, start: String?,
+                          end: String?, amount: Long, status: String, created: String, paid: Long) =
+        app.site.core.model.Payable(id, projectId, number?.toInt(),
+            if (kind == "attendance") app.site.core.model.PayableKind.ATTENDANCE else app.site.core.model.PayableKind.CUSTOM,
+            amount, paid, app.site.core.logic.Money.status(amount, paid, status == "void"), workerId,
+            start?.let(LocalDate::parse), end?.let(LocalDate::parse), title, SyncEngine.parseInstant(created))
+
+    private fun livePayables(projectId: String) = q.payablesFor(projectId).executeAsList().map {
+        payableOf(it.id, it.project_id, it.number, it.kind, it.worker_id, it.title, it.period_start, it.period_end, it.amount_paise, it.status,
+            it.created_at, it.paid_paise)
+    }
+
+    override fun payables(projectId: String): Flow<List<app.site.core.model.Payable>> =
+        combine(q.payablesFor(projectId).asFlow().mapToList(io), q.paymentsFor("").asFlow().mapToList(io), canSeeMoney(projectId)) { rows, _, ok ->
+            if (!ok) emptyList() else livePayables(projectId)
+        }
+
+    override fun payments(payableId: String): Flow<List<app.site.core.model.Payment>> =
+        q.paymentsFor(payableId).asFlow().mapToList(io).map { rows ->
+            rows.map {
+                app.site.core.model.Payment(it.id, it.payable_id, it.amount_paise, LocalDate.parse(it.paid_on),
+                    app.site.core.model.PaymentMode.entries.firstOrNull { m -> m.name.equals(it.mode, true) } ?: app.site.core.model.PaymentMode.OTHER,
+                    it.reference, SyncEngine.parseInstant(it.created_at))
+            }
+        }
+
+    private fun preview(projectId: String, from: LocalDate, to: LocalDate): List<app.site.core.model.WagePreview> {
+        val p = q.project(projectId).executeAsOneOrNull() ?: return emptyList()
+        return app.site.core.logic.Money.previewWages(q.workers(projectId).executeAsList().map(::worker),
+            q.attendanceBetween(projectId, from.toString(), to.toString()).executeAsList().map(::attendance), p.shift_hours, from, to,
+            livePayables(projectId))
+    }
+
+    override fun previewWages(projectId: String, from: LocalDate, to: LocalDate): Flow<List<app.site.core.model.WagePreview>> =
+        combine(q.attendanceBetween(projectId, from.toString(), to.toString()).asFlow().mapToList(io), q.payablesFor(projectId).asFlow().mapToList(io),
+            q.workers(projectId).asFlow().mapToList(io)) { _, _, _ -> preview(projectId, from, to) }
+
+    private fun guardMoney(projectId: String) { if (!seesMoney(projectId, _session.value)) throw AppError.NotAllowed }
+
+    private fun enqueuePayable(row: app.site.core.local.Payable, by: String) = engine.enqueueUpsert("payables", row.id, buildJsonObject {
+        put("id", row.id); put("project_id", row.project_id); put("kind", row.kind); putOrNull("worker_id", row.worker_id)
+        putOrNull("title", row.title); putOrNull("period_start", row.period_start); putOrNull("period_end", row.period_end)
+        put("amount_paise", row.amount_paise); put("recorded_by", by)
+    })
+
+    override suspend fun recordWages(projectId: String, from: LocalDate, to: LocalDate): Result<Int> = call {
+        val user = me()
+        guardMoney(projectId)
+        Validate.range(from, to).getOrThrow()
+        Validate.notFuture(to, today()).getOrThrow()
+        val lines = preview(projectId, from, to)
+        db.transaction {
+            for (l in lines) {
+                val row = app.site.core.local.Payable(newId(), projectId, null, "attendance", l.worker.id, null, from.toString(), to.toString(),
+                    l.amountPaise, "due", now())
+                q.upsertPayable(row)
+                enqueuePayable(row, user.id)
+            }
+        }
+        syncNow()
+        lines.size
+    }
+
+    override suspend fun addCustomPayable(projectId: String, title: String, amountPaise: Long): Result<app.site.core.model.Payable> = call {
+        val user = me()
+        guardMoney(projectId)
+        val t = title.trim()
+        if (t.isEmpty()) throw AppError.Invalid("title", AppError.Reason.REQUIRED)
+        if (t.length > app.site.core.logic.Money.TITLE_MAX) throw AppError.Invalid("title", AppError.Reason.TOO_LONG)
+        if (amountPaise <= 0 || amountPaise > app.site.core.logic.Money.MAX_PAISE) throw AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE)
+        val row = app.site.core.local.Payable(newId(), projectId, null, "custom", null, t, null, null, amountPaise, "due", now())
+        db.transaction { q.upsertPayable(row); enqueuePayable(row, user.id) }
+        syncNow()
+        payableOf(row.id, projectId, null, row.kind, null, t, null, null, amountPaise, "due", row.created_at, 0)
+    }
+
+    override suspend fun pay(payableId: String, amountPaise: Long, paidOn: LocalDate, mode: app.site.core.model.PaymentMode,
+                             reference: String?): Result<Unit> = call {
+        val user = me()
+        val p = q.payableOne(payableId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        guardMoney(p.project_id)
+        if (amountPaise <= 0) throw AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE)
+        if (amountPaise > p.amount_paise - p.paid_paise) throw AppError.Invalid("amount", AppError.Reason.MORE_THAN_DUE)
+        Validate.notFuture(paidOn, today()).getOrThrow()
+        val row = app.site.core.local.Payment(newId(), p.project_id, payableId, amountPaise, paidOn.toString(), mode.name.lowercase(),
+            reference?.trim()?.ifBlank { null }, now())
+        db.transaction {
+            q.upsertPayment(row)
+            // the server's trigger sets the status; show the same straight away
+            q.setPayableStatus(app.site.core.logic.Money.status(p.amount_paise, p.paid_paise + amountPaise).name.lowercase(), payableId)
+            engine.enqueueUpsert("payments", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("payable_id", payableId); put("amount_paise", amountPaise)
+                put("paid_on", row.paid_on); put("mode", row.mode); putOrNull("reference", row.reference); put("recorded_by", user.id)
+            })
+        }
+        syncNow()
+    }
+
+    override fun expenses(projectId: String): Flow<List<app.site.core.model.Expense>> =
+        combine(q.expensesFor(projectId).asFlow().mapToList(io), canSeeMoney(projectId)) { rows, ok ->
+            if (!ok) emptyList() else rows.map(::expense)
+        }
+
+    private fun expense(r: app.site.core.local.Expense) = app.site.core.model.Expense(r.id, r.project_id,
+        app.site.core.model.ExpenseCategory.entries.firstOrNull { it.name.equals(r.category, true) } ?: app.site.core.model.ExpenseCategory.MISCELLANEOUS,
+        r.amount_paise, LocalDate.parse(r.spent_on), r.note, SyncEngine.parseInstant(r.created_at))
+
+    override suspend fun addExpense(projectId: String, category: app.site.core.model.ExpenseCategory, amountPaise: Long, spentOn: LocalDate,
+                                    note: String?): Result<app.site.core.model.Expense> = call {
+        val user = me()
+        guardMoney(projectId)
+        if (amountPaise <= 0 || amountPaise > app.site.core.logic.Money.MAX_PAISE) throw AppError.Invalid("amount", AppError.Reason.NOT_POSITIVE)
+        Validate.notFuture(spentOn, today()).getOrThrow()
+        val row = app.site.core.local.Expense(newId(), projectId, category.name.lowercase(), amountPaise, spentOn.toString(),
+            note?.trim()?.take(500)?.ifBlank { null }, now())
+        db.transaction {
+            q.upsertExpense(row)
+            engine.enqueueUpsert("expenses", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", projectId); put("category", row.category); put("amount_paise", amountPaise)
+                put("spent_on", row.spent_on); putOrNull("note", row.note); put("created_by", user.id)
+            })
+        }
+        syncNow()
+        expense(row)
+    }
+
+    override fun spend(projectId: String, from: LocalDate?, to: LocalDate?): Flow<app.site.core.model.SpendSummary> =
+        combine(payables(projectId), expenses(projectId)) { p, e -> app.site.core.logic.Money.spend(p, e, from, to, clock.zone) }
+
     // ================================================================ feed
 
     override fun feed(projectId: String): Flow<List<ActivityEvent>> =
@@ -1003,6 +1146,18 @@ class SyncedBackend(
         SyncEngine.PullSpec("comments", "id,project_id,issue_id,task_id,author_id,body,created_at,updated_at", { o ->
             q.upsertComment(app.site.core.local.Comment(o.str("id"), o.str("project_id"), o.strOrNull("issue_id"), o.strOrNull("task_id"),
                 o.strOrNull("author_id"), o.str("body"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("payables", "id,project_id,number,kind,worker_id,title,period_start,period_end,amount_paise,status,created_at,updated_at", { o ->
+            q.upsertPayable(app.site.core.local.Payable(o.str("id"), o.str("project_id"), o.lngOrNull("number"), o.str("kind"), o.strOrNull("worker_id"),
+                o.strOrNull("title"), o.strOrNull("period_start"), o.strOrNull("period_end"), o.lng("amount_paise"), o.str("status"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("payments", "id,project_id,payable_id,amount_paise,paid_on,mode,reference,created_at,updated_at", { o ->
+            q.upsertPayment(app.site.core.local.Payment(o.str("id"), o.str("project_id"), o.str("payable_id"), o.lng("amount_paise"), o.str("paid_on"),
+                o.str("mode"), o.strOrNull("reference"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("expenses", "id,project_id,category,amount_paise,spent_on,note,created_at,updated_at", { o ->
+            q.upsertExpense(app.site.core.local.Expense(o.str("id"), o.str("project_id"), o.str("category"), o.lng("amount_paise"), o.str("spent_on"),
+                o.strOrNull("note"), o.str("created_at")))
         }, { it.str("id") }),
         SyncEngine.PullSpec("albums", "id,project_id,name,updated_at", { o ->
             q.upsertAlbum(AlbumRow(o.str("id"), o.str("project_id"), o.str("name")))
@@ -1076,6 +1231,7 @@ class SyncedBackend(
         "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
         "project_members" to q::deleteProjectMember, "org_members" to q::deleteOrgMember, "invites" to q::deleteInvite,
         "issues" to q::deleteIssueRow, "comments" to q::deleteComment,
+        "payables" to q::deletePayable, "payments" to q::deletePayment, "expenses" to q::deleteExpense,
     )
 
     // ================================================================ errors

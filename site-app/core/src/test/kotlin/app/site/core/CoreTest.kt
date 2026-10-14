@@ -44,6 +44,9 @@ class FormatTest {
         assertEquals(120_050L, Format.parseRupees("1,200.5"))
         assertEquals(null, Format.parseRupees("abc"))
         assertEquals(null, Format.parseRupees("-5"))
+        assertEquals("8000", Format.rupeesPlain(8_000_00))
+        assertEquals("1234.5", Format.rupeesPlain(1_234_50))
+        assertEquals(1_234_50L, Format.parseRupees(Format.rupeesPlain(1_234_50)))
         assertEquals("12.5", Format.qty(12.5))
         assertEquals("420", Format.qty(420.0))
     }

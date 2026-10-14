@@ -154,6 +154,10 @@ data class ReportParts(
     val wages: Boolean = false,
     /** Material received, issued and used in the period, and what's on site now. */
     val material: Boolean = true,
+    /** Issues raised or fixed in the period, and what's still open. */
+    val issues: Boolean = true,
+    /** Bills recorded and payments made in the period. Managers and accountants only. */
+    val payments: Boolean = false,
 )
 
 enum class ReportStatus { QUEUED, RENDERING, READY, FAILED }

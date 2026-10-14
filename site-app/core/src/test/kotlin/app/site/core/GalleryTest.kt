@@ -140,3 +140,40 @@ class IssueTest {
         assertIs<AppError.Invalid>(b.comment(i.id, " ").exceptionOrNull())
     }
 }
+
+class MoneyTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun demoMoney() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val crane = b.payables(tower.id).first().single()
+        assertEquals(app.site.core.model.PayableStatus.PARTLY_PAID, crane.status)
+        assertEquals(8_000_00L, crane.duePaise)
+        b.pay(crane.id, 8_000_00, b.today(), app.site.core.model.PaymentMode.CASH).getOrThrow()
+        assertEquals(app.site.core.model.PayableStatus.PAID, b.payables(tower.id).first().single().status)
+
+        val week = b.previewWages(tower.id, b.today().minusDays(7), b.today()).first()
+        assertEquals(5, week.size, "five workers on the tower")
+        val n = b.recordWages(tower.id, b.today().minusDays(7), b.today()).getOrThrow()
+        assertEquals(5, n)
+        val spend = b.spend(tower.id).first()
+        assertEquals(18_000_00L, spend.byCategory[app.site.core.model.SpendCategory.MISCELLANEOUS])
+        assertEquals(week.sumOf { it.amountPaise }, spend.byCategory[app.site.core.model.SpendCategory.ATTENDANCE])
+        assertEquals(1_250_00L, spend.byCategory[app.site.core.model.SpendCategory.PETTY_SPEND])
+        assertIs<AppError.Invalid>(b.addCustomPayable(tower.id, " ", 100).exceptionOrNull())
+        assertIs<AppError.Invalid>(b.addExpense(tower.id, app.site.core.model.ExpenseCategory.ASSETS, 0, b.today(), null).exceptionOrNull())
+    }
+
+    @Test fun moneyIsHiddenFromSiteStaff() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9800000001", FakeBackend.DEMO_OTP).getOrThrow()   // Ravi signs in
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        // the demo makes whoever signs in the owner; take that away to see what an engineer sees
+        b.demoSetRole(app.site.core.model.OrgRole.MEMBER)
+        assertTrue(!b.canSeeMoney(tower.id).first())
+        assertTrue(b.payables(tower.id).first().isEmpty())
+        assertIs<AppError.NotAllowed>(b.addExpense(tower.id, app.site.core.model.ExpenseCategory.PETTY_SPEND, 100_00, b.today(), null).exceptionOrNull())
+    }
+}

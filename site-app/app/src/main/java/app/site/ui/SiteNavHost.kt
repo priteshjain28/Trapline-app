@@ -53,6 +53,7 @@ object Routes {
     const val TEAM = "project/{pid}/team"
     const val COMPANY = "company"
     const val ISSUES = "project/{pid}/issues"
+    const val EXPENSES = "project/{pid}/expenses"
     const val NEW_ISSUE = "project/{pid}/issues/new"
     const val ISSUE = "project/{pid}/issue/{iid}"
     const val ALBUM = "project/{pid}/albums/{aid}"
@@ -134,11 +135,15 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                         Planned.GALLERY -> nav.navigate(Routes.gallery(projectId))
                         Planned.MEMBERS -> nav.navigate("project/$projectId/team")
                         Planned.ISSUES -> nav.navigate("project/$projectId/issues")
+                        Planned.EXPENSES -> nav.navigate("project/$projectId/expenses")
                         else -> nav.navigate(Routes.planned(it))
                     }
                 },
                 onMaterial = { nav.navigate(Routes.material(projectId, it)) },
             )
+        }
+        composable(Routes.EXPENSES, listOf(pid)) { e ->
+            app.site.ui.money.ExpensesScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() })
         }
         composable(Routes.ISSUES, listOf(pid)) { e ->
             val projectId = e.arguments?.getString("pid").orEmpty()

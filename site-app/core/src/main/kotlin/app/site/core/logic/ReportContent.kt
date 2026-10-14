@@ -29,7 +29,12 @@ data class ReportContent(
     val totals: Totals,
     /** One row per material that moved in the period, by name. */
     val materials: List<MaterialRow> = emptyList(),
+    val issues: List<IssueRow> = emptyList(),
+    val payments: Payments? = null,
 ) {
+    data class IssueRow(val number: Int?, val title: String, val open: Boolean, val raisedInPeriod: Boolean, val due: LocalDate?)
+    data class Payments(val billedPaise: Long, val paidPaise: Long, val stillDuePaise: Long, val lines: List<PaymentLine>)
+    data class PaymentLine(val title: String, val paidOn: LocalDate, val amountPaise: Long)
     data class MaterialRow(val name: String, val uom: String, val received: Double, val out: Double, val onSiteNow: Double)
     data class Day(val date: LocalDate, val updates: List<UpdateRow>, val attendance: Headcount?, val photos: List<String>)
     data class UpdateRow(
@@ -41,7 +46,8 @@ data class ReportContent(
     data class WorkerRow(val name: String, val skill: String?, val days: Double, val otHours: Double, val wagesPaise: Long)
     data class Totals(val updates: Int, val photos: Int, val workerDays: Double, val wagesPaise: Long)
 
-    val isEmpty: Boolean get() = days.isEmpty() && taskSummary.isEmpty() && workerSummary.isEmpty() && materials.isEmpty()
+    val isEmpty: Boolean get() = days.isEmpty() && taskSummary.isEmpty() && workerSummary.isEmpty() && materials.isEmpty() &&
+        issues.isEmpty() && (payments == null || (payments.billedPaise == 0L && payments.paidPaise == 0L))
 }
 
 object ReportBuilder {
@@ -58,6 +64,10 @@ object ReportBuilder {
         people: Map<String, User>,
         /** Each material on the site with its history (from MaterialRepository.stock and history). */
         material: List<Pair<app.site.core.model.StockItem, List<app.site.core.model.StockEntry>>> = emptyList(),
+        issues: List<app.site.core.model.Issue> = emptyList(),
+        /** Payables with their payments and a display title each. */
+        payables: List<Triple<app.site.core.model.Payable, List<app.site.core.model.Payment>, String>> = emptyList(),
+        zone: java.time.ZoneId = java.time.ZoneId.of("Asia/Kolkata"),
     ): ReportContent {
         val inRange = { d: LocalDate -> !d.isBefore(from) && !d.isAfter(to) }
         val taskById = tasks.associateBy { it.id }
@@ -112,7 +122,25 @@ object ReportBuilder {
                     onSiteNow = item.inStock)
             }.sortedBy { it.name.lowercase() }
         } else emptyList()
-        return ReportContent(project, type, from, to, parts, days, taskSummary, workerSummary, totals, materials)
+        val issueRows = if (parts.issues) {
+            issues.filter { i ->
+                val raised = i.createdAt.atZone(zone).toLocalDate()
+                val closed = i.closedAt?.atZone(zone)?.toLocalDate()
+                // raised by the end of the period and not fixed before it started
+                !raised.isAfter(to) && (closed == null || !closed.isBefore(from))
+            }.map { i ->
+                val raised = i.createdAt.atZone(zone).toLocalDate()
+                val closed = i.closedAt?.atZone(zone)?.toLocalDate()
+                ReportContent.IssueRow(i.number, i.title, closed == null || closed.isAfter(to), inRange(raised), i.dueDate)
+            }.sortedWith(compareBy({ !it.open }, { it.number ?: Int.MAX_VALUE }))
+        } else emptyList()
+        val payments = if (parts.payments) {
+            val billed = payables.filter { (p, _, _) -> inRange(p.periodEnd ?: p.createdAt.atZone(zone).toLocalDate()) }.sumOf { it.first.amountPaise }
+            val lines = payables.flatMap { (_, pays, title) -> pays.filter { inRange(it.paidOn) }.map { ReportContent.PaymentLine(title, it.paidOn, it.amountPaise) } }
+                .sortedBy { it.paidOn }
+            ReportContent.Payments(billed, lines.sumOf { it.amountPaise }, payables.sumOf { it.first.duePaise }, lines)
+        } else null
+        return ReportContent(project, type, from, to, parts, days, taskSummary, workerSummary, totals, materials, issueRows, payments)
     }
 
     private fun headcount(list: List<Attendance>) = ReportContent.Headcount(

@@ -185,6 +185,45 @@ CREATE TABLE comment (
 );
 CREATE INDEX comment_issue ON comment(issue_id);
 
+-- Money: managers and accountants only (the server sends these rows to no one else).
+CREATE TABLE payable (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  kind TEXT NOT NULL,
+  worker_id TEXT,
+  title TEXT,
+  period_start TEXT,
+  period_end TEXT,
+  amount_paise INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX payable_project ON payable(project_id);
+
+CREATE TABLE payment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  payable_id TEXT NOT NULL,
+  amount_paise INTEGER NOT NULL,
+  paid_on TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  reference TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX payment_payable ON payment(payable_id);
+
+CREATE TABLE expense (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount_paise INTEGER NOT NULL,
+  spent_on TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX expense_project ON expense(project_id);
+
 -- Material. Stock is never stored: it is the sum of these rows, like the server's stock_movements ledger.
 CREATE TABLE material (
   id TEXT NOT NULL PRIMARY KEY,
@@ -455,6 +494,35 @@ SELECT * FROM comment WHERE issue_id = ? ORDER BY created_at;
 deleteComment:
 DELETE FROM comment WHERE id = ?;
 
+-- ---------------------------------------------------------------- money
+
+upsertPayable:
+INSERT OR REPLACE INTO payable VALUES ?;
+payablesFor:
+SELECT p.*, coalesce((SELECT sum(m.amount_paise) FROM payment m WHERE m.payable_id = p.id), 0) AS paid_paise
+FROM payable p WHERE p.project_id = ? AND p.status <> 'void' ORDER BY p.created_at DESC;
+payableOne:
+SELECT p.*, coalesce((SELECT sum(m.amount_paise) FROM payment m WHERE m.payable_id = p.id), 0) AS paid_paise
+FROM payable p WHERE p.id = ?;
+setPayableStatus:
+UPDATE payable SET status = ? WHERE id = ?;
+deletePayable:
+DELETE FROM payable WHERE id = ?;
+
+upsertPayment:
+INSERT OR REPLACE INTO payment VALUES ?;
+paymentsFor:
+SELECT * FROM payment WHERE payable_id = ? ORDER BY created_at DESC;
+deletePayment:
+DELETE FROM payment WHERE id = ?;
+
+upsertExpense:
+INSERT OR REPLACE INTO expense VALUES ?;
+expensesFor:
+SELECT * FROM expense WHERE project_id = ? ORDER BY spent_on DESC, created_at DESC;
+deleteExpense:
+DELETE FROM expense WHERE id = ?;
+
 -- ---------------------------------------------------------------- material
 
 upsertMaterial:
@@ -548,6 +616,9 @@ wipe {
   DELETE FROM task_update;
   DELETE FROM media;
   DELETE FROM album;
+  DELETE FROM payable;
+  DELETE FROM payment;
+  DELETE FROM expense;
   DELETE FROM issue;
   DELETE FROM comment;
   DELETE FROM task_category;

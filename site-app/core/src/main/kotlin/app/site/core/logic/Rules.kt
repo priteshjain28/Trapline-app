@@ -237,3 +237,54 @@ object Categories {
         lists.flatMap { it }.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
             .sortedWith(compareBy({ !it.equals("General", true) }, { it.lowercase() }))
 }
+
+/** Money rules shared by the demo and the synced layer; they mirror the server's. */
+object Money {
+    /** app.sync_payable_status(): from what's been paid. */
+    fun status(amountPaise: Long, paidPaise: Long, void: Boolean = false): app.site.core.model.PayableStatus = when {
+        void -> app.site.core.model.PayableStatus.VOID
+        paidPaise <= 0 -> app.site.core.model.PayableStatus.DUE
+        paidPaise < amountPaise -> app.site.core.model.PayableStatus.PARTLY_PAID
+        else -> app.site.core.model.PayableStatus.PAID
+    }
+
+    /** preview_attendance_payables(): attendance in the period not already on a live payable for that worker. */
+    fun previewWages(
+        workers: List<Worker>, attendance: List<Attendance>, shiftHours: Double,
+        from: LocalDate, to: LocalDate, payables: List<app.site.core.model.Payable>,
+    ): List<app.site.core.model.WagePreview> {
+        val covered = payables.filter { it.kind == app.site.core.model.PayableKind.ATTENDANCE && it.status != app.site.core.model.PayableStatus.VOID }
+        val open = attendance.filter { a ->
+            !a.date.isBefore(from) && !a.date.isAfter(to) &&
+                covered.none { p -> p.workerId == a.workerId && p.periodStart != null && p.periodEnd != null &&
+                    !a.date.isBefore(p.periodStart) && !a.date.isAfter(p.periodEnd) }
+        }
+        return Wages.lines(workers, open, shiftHours).filter { it.amountPaise > 0 }
+            .map { app.site.core.model.WagePreview(it.worker, it.days, it.otHours, it.amountPaise) }
+    }
+
+    /** expense_lines: payables by kind, plus expenses by their own category. */
+    fun spend(payables: List<app.site.core.model.Payable>, expenses: List<app.site.core.model.Expense>, from: LocalDate?, to: LocalDate?,
+              zone: java.time.ZoneId): app.site.core.model.SpendSummary {
+        fun inRange(d: LocalDate) = (from == null || !d.isBefore(from)) && (to == null || !d.isAfter(to))
+        val totals = mutableMapOf<app.site.core.model.SpendCategory, Long>()
+        for (p in payables) {
+            if (p.status == app.site.core.model.PayableStatus.VOID) continue
+            val day = p.periodEnd ?: p.createdAt.atZone(zone).toLocalDate()
+            if (!inRange(day)) continue
+            val cat = if (p.kind == app.site.core.model.PayableKind.ATTENDANCE) app.site.core.model.SpendCategory.ATTENDANCE
+                else app.site.core.model.SpendCategory.MISCELLANEOUS
+            totals[cat] = (totals[cat] ?: 0) + p.amountPaise
+        }
+        for (e in expenses) {
+            if (!inRange(e.spentOn)) continue
+            val cat = app.site.core.model.SpendCategory.valueOf(e.category.name)
+            totals[cat] = (totals[cat] ?: 0) + e.amountPaise
+        }
+        return app.site.core.model.SpendSummary(app.site.core.model.SpendCategory.entries.associateWith { totals[it] ?: 0 })
+    }
+
+    const val TITLE_MAX = 120
+    /** One crore rupees: anything bigger is a typo on a site app. */
+    const val MAX_PAISE = 1_00_00_000_00L
+}

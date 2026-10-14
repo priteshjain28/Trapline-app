@@ -104,11 +104,12 @@ class FakeServer {
                     m.putIfAbsent("status", JsonPrimitive("not_started")); m.putIfAbsent("done_qty", JsonPrimitive(0)); m.putIfAbsent("progress_pct", JsonPrimitive(0))
                     m.putIfAbsent("category", JsonPrimitive("General"))
                 }
-                "grns", "material_issues", "issues" -> {
+                "grns", "material_issues", "issues", "payables" -> {
                     val key = table + "|" + row.s("project_id")
                     counters[key] = (counters[key] ?: 0) + 1
                     m["number"] = JsonPrimitive(counters[key])
                     if (table == "issues") m.putIfAbsent("status", JsonPrimitive("open"))
+                    if (table == "payables") m.putIfAbsent("status", JsonPrimitive("due"))
                 }
                 "projects" -> { m.putIfAbsent("status", JsonPrimitive("active")); m.putIfAbsent("progress_pct", JsonPrimitive(0)) }
                 "reports" -> m["expires_at"] = JsonPrimitive(Instant.parse(m["created_at"]!!.jsonPrimitive.content).plusSeconds(90L * 86400).toString())

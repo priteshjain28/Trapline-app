@@ -339,6 +339,39 @@ class SyncTest {
         assertEquals(0, a.app.tasks(p.id).first().single().openIssues)
     }
 
+    @Test fun wagesPaymentsAndExpensesSync() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val p = a.app.create(NewProject("Tower")).getOrThrow()
+        val w = a.app.addWorker(NewWorker(p.id, "Suresh", wagePaise = 800_00, otRatePaise = 100_00)).getOrThrow()
+        val today = a.app.today()
+        a.app.mark(p.id, w.id, today.minusDays(2), AttendanceStatus.PRESENT, otHours = 2.0)
+        a.app.mark(p.id, w.id, today.minusDays(1), AttendanceStatus.HALF_DAY)
+        assertTrue(a.app.canSeeMoney(p.id).first(), "the owner sees money")
+
+        val preview = a.app.previewWages(p.id, today.minusDays(6), today).first().single()
+        assertEquals(800_00 + 400_00 + 200_00L, preview.amountPaise)
+        assertEquals(1, a.app.recordWages(p.id, today.minusDays(6), today).getOrThrow())
+        assertTrue(a.app.previewWages(p.id, today.minusDays(6), today).first().isEmpty(), "those days are on a payable now")
+        assertEquals(0, a.app.recordWages(p.id, today.minusDays(6), today).getOrThrow(), "never paid twice")
+
+        val bill = a.app.payables(p.id).first().single()
+        a.app.pay(bill.id, 1000_00, today, app.site.core.model.PaymentMode.UPI).getOrThrow()
+        assertEquals(app.site.core.model.PayableStatus.PARTLY_PAID, a.app.payables(p.id).first().single().status)
+        assertEquals(AppError.Reason.MORE_THAN_DUE,
+            (a.app.pay(bill.id, 500_00, today, app.site.core.model.PaymentMode.CASH).exceptionOrNull() as AppError.Invalid).reason)
+        a.app.addExpense(p.id, app.site.core.model.ExpenseCategory.PETTY_SPEND, 250_00, today, "Tea").getOrThrow()
+        a.sync()
+
+        assertEquals("attendance", server.rows("payables").single().s("kind"))
+        assertEquals(1, server.rows("payments").size)
+        assertEquals(1, server.rows("expenses").size)
+        val spend = a.app.spend(p.id).first()
+        assertEquals(1400_00L, spend.byCategory[app.site.core.model.SpendCategory.ATTENDANCE])
+        assertEquals(250_00L, spend.byCategory[app.site.core.model.SpendCategory.PETTY_SPEND])
+        assertEquals(1650_00L, spend.totalPaise)
+        assertEquals(1, a.app.payables(p.id).first().single().number, "numbered by the server")
+    }
+
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {
         val a = Phone("9876543210").apply { signIn() }
         val p = a.app.create(NewProject("Tower")).getOrThrow()

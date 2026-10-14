@@ -24,6 +24,8 @@ class ReportService(
     private val reports: ReportRepository,
     private val people: suspend () -> Map<String, User>,
     private val materials: app.site.core.data.MaterialRepository,
+    private val issues: app.site.core.data.IssueRepository,
+    private val money: app.site.core.data.MoneyRepository,
     private val renderer: PdfReportRenderer,
     private val scope: CoroutineScope,
 ) {
@@ -49,6 +51,14 @@ class ReportService(
                 people(),
                 if (r.parts.material) materials.stock(r.projectId).first().map { it to materials.history(r.projectId, it.material.id).first() }
                 else emptyList(),
+                if (r.parts.issues) issues.siteIssues(r.projectId).first() else emptyList(),
+                // money only for people who may see it, whatever the report asked for
+                if (r.parts.payments && money.canSeeMoney(r.projectId).first()) {
+                    val names = attendance.workers(r.projectId).first().associate { it.id to it.name }
+                    money.payables(r.projectId).first().map { p ->
+                        Triple(p, money.payments(p.id).first(), p.title ?: names[p.workerId].orEmpty())
+                    }
+                } else emptyList(),
             )
             val file = renderer.render(r.id, content)
             reports.markReady(r.id, file.absolutePath)

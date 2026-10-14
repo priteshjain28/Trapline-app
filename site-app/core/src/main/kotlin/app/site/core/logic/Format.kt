@@ -32,6 +32,13 @@ object Format {
     }
 
     /** Parse what people type for money: "800", "800.5", "1,200" -> paise. Null if not a number. */
+    /** For a form field: "8000" or "8000.5", no symbol or grouping; parseRupees reads it back. */
+    fun rupeesPlain(paise: Long): String {
+        val r = paise / 100
+        val p = paise % 100
+        return if (p == 0L) r.toString() else "$r." + p.toString().padStart(2, '0').trimEnd('0')
+    }
+
     fun parseRupees(text: String): Long? {
         val clean = text.replace(",", "").replace("₹", "").trim()
         if (clean.isEmpty()) return null

@@ -198,31 +198,40 @@ private fun WorkerRow(w: Worker, a: Attendance?, onMark: (AttendanceStatus) -> U
     }
 }
 
-/** S23 (part): wages earned in the last 7 days, from attendance. Recording payments comes later. */
+/** S23: wages from attendance not yet on a payable, recorded as payables per worker, and paying them. */
 @Composable
 private fun WagesPane(project: Project) {
     val container = LocalContainer.current
+    val scope = rememberCoroutineScope()
     val to = container.today()
     val from = to.minusDays(6)
-    val workersFlow = remember(project.id) { container.attendance.workers(project.id) }
-    val workers by workersFlow.collectAsStateWithLifecycle(initialValue = emptyList())
-    val rangeFlow = remember(project.id, from, to) { container.attendance.range(project.id, from, to) }
-    val records by rangeFlow.collectAsStateWithLifecycle(initialValue = emptyList())
-    val lines = Wages.lines(workers, records, project.shiftHours)
+    val canSee by remember(project.id) { container.money.canSeeMoney(project.id) }.collectAsStateWithLifecycle(initialValue = null)
+    val preview by remember(project.id, from, to) { container.money.previewWages(project.id, from, to) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val payables by remember(project.id) { container.money.payables(project.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val workers by remember(project.id) { container.attendance.workers(project.id) }.collectAsStateWithLifecycle(initialValue = emptyList())
+    var paying by remember { mutableStateOf<app.site.core.model.Payable?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
     val c = SiteTheme.colors
+    val names = workers.associate { it.id to it.name }
+    val wages = payables.filter { it.kind == app.site.core.model.PayableKind.ATTENDANCE }
+    fun title(p: app.site.core.model.Payable) = names[p.workerId].orEmpty()
 
+    if (canSee == null) { LoadingBlock(); return }
+    if (canSee == false) { app.site.ui.money.MoneyHidden(Modifier.padding(Size.gutter)); return }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Space.s7)) {
         item {
             Column(Modifier.padding(Size.gutter), verticalArrangement = Arrangement.spacedBy(Space.s2)) {
                 Text(stringResource(R.string.wages_period, Format.range(from, to, to)), style = SiteTheme.type.sm, color = c.textMuted)
-                Text(Format.rupees(lines.sumOf { it.amountPaise }), style = SiteTheme.type.xl, color = c.text)
+                Text(Format.rupees(preview.sumOf { it.amountPaise }), style = SiteTheme.type.xl, color = c.text)
                 InfoBanner(stringResource(R.string.wages_note))
+                notice?.let { InfoBanner(it, tone = Tone.SUCCESS, icon = R.drawable.ic_check) }
             }
         }
-        if (lines.isEmpty()) item {
-            EmptyState(R.drawable.ic_indian_rupee, stringResource(R.string.wages_empty_title), stringResource(R.string.wages_empty_body))
+        if (preview.isEmpty()) item {
+            if (wages.isEmpty()) EmptyState(R.drawable.ic_indian_rupee, stringResource(R.string.wages_empty_title), stringResource(R.string.wages_empty_body))
+            else Text(stringResource(R.string.wages_all_recorded), Modifier.padding(horizontal = Size.gutter), style = SiteTheme.type.sm, color = c.textMuted)
         }
-        items(lines, key = { it.worker.id }) { l ->
+        items(preview, key = { "p" + it.worker.id }) { l ->
             ListRow {
                 Column(Modifier.weight(1f)) {
                     Text(l.worker.name, style = SiteTheme.type.base, color = c.text)
@@ -232,5 +241,20 @@ private fun WagesPane(project: Project) {
                 Text(Format.rupees(l.amountPaise), style = SiteTheme.type.base.copy(fontWeight = FontWeight.W600), color = c.text)
             }
         }
+        if (preview.isNotEmpty()) item {
+            val done = androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(R.plurals.wages_recorded_count, preview.size, preview.size)
+            Box(Modifier.padding(Size.gutter)) {
+                PrimaryButton(stringResource(R.string.action_record_payable), {
+                    scope.launch { container.money.recordWages(project.id, from, to).onSuccess { notice = done } }
+                }, Modifier.fillMaxWidth())
+            }
+        }
+        if (wages.isNotEmpty()) {
+            item { app.site.design.components.SectionLabel(stringResource(R.string.wages_recorded), Modifier.padding(horizontal = Size.gutter)) }
+            items(wages, key = { it.id }) { p ->
+                app.site.ui.money.PayableRow(p, stringResource(R.string.payable_period, title(p), Format.range(p.periodStart!!, p.periodEnd!!, to))) { paying = p }
+            }
+        }
     }
+    paying?.let { p -> app.site.ui.money.PaySheet(p, title(p)) { paying = null } }
 }

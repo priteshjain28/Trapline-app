@@ -13,7 +13,7 @@ Update task progress with photos and remarks,tasks,must,yes,yes,"S09 inferred; S
 Task categories,tasks,must,yes,yes,"S27 ""brick work (General)""; build: company list (common ones + your own, synced; same name on two phones = one) picked as chips on S10"
 Task status filters (In Progress Delayed),tasks,must,yes,yes,S08 chips observed; build: S08 chips
 Report builder with date range,reports,must,yes,yes,S06 observed; build: S06
-Report parts checklist,reports,must,yes,partial,"S06 observed: 15+ parts; build: 5 parts (work, photos, labour, wages, material); issues and payables wait for those screens"
+Report parts checklist,reports,must,yes,yes,"S06 observed: 15+ parts; build: 7 parts (work, photos, labour, wages, material, issues, payments); payments only for money roles"
 Detailed (day-wise) report,reports,must,yes,yes,S06 observed; build: on-device PDF until the server worker exists
 Generated reports list,reports,must,yes,yes,"S07 observed; build: S07 open, share, retry"
 Share report file,reports,must,yes,yes,inferred; covers WhatsApp via share sheet; build: Android share sheet
@@ -43,17 +43,17 @@ Transfer requests,material,should,yes,no,S18 observed
 Material returns,material,should,yes,no,S20 observed
 Consumption records,material,should,yes,partial,S06 Consumptions part; build: 'Used' stock updates are consumption records; not yet a report part
 Vendors,material,should,unknown,no,inferred; POs need one
-Attendance payables with total due,labour,should,yes,partial,S23 observed; build: S21 Wages tab: last 7 days from attendance; recording not built
-Review and record payable for a period,labour,should,yes,no,S23 FAB observed
+Attendance payables with total due,labour,should,yes,yes,"S23 observed; build: recorded wages with paid / due and Pay (cash, UPI, bank, cheque)"
+Review and record payable for a period,labour,should,yes,yes,S23 FAB observed; build: Wages tab previews unpaid attendance (same rule as the server) and records one payable per worker
 Remarks on each attendance record (toggle),labour,should,yes,yes,S24 observed; build: S24 + S21 sheet
 Hourly attendance mode,labour,should,yes,partial,S24 observed; build: shift length used for hourly wages; marking hours per day not built
-Expenses dashboard with total,money,should,yes,no,S26 observed
-Expense categories (material subcontractor attendance petty misc assets),money,should,yes,no,S26 observed
-Petty spend entries,money,should,yes,no,S26 tile; src 3
-Custom payables,money,should,yes,no,S06 Payables > Custom
-Issues with due date assignee and status,issues,should,yes,no,S31 observed
-Issue tabs Open Closed All with counts,issues,should,yes,no,S31 observed
-Comments and replies,feed,should,yes,no,"S27 counts and ""Give Reply"""
+Expenses dashboard with total,money,should,yes,yes,"S26 observed; build: total spent, buckets, bills to pay, spend list; managers and accountants only"
+Expense categories (material subcontractor attendance petty misc assets),money,should,yes,yes,"S26 observed; build: six buckets, each rupee counted once like the server's expense_lines view"
+Petty spend entries,money,should,yes,yes,"S26 tile; build: Add spend (petty cash, other, tools and assets)"
+Custom payables,money,should,yes,yes,"S06 Payables > Custom; build: Add bill on S26, paid in parts"
+Issues with due date assignee and status,issues,should,yes,yes,"S31 observed; build: raise with details, linked task, who fixes it, fix-by date; mark fixed/reopen; open count on the task"
+Issue tabs Open Closed All with counts,issues,should,yes,yes,"S31 observed; build: S31 Open/Closed/All with counts, search by title or #number"
+Comments and replies,feed,should,yes,partial,S27 counts and Give Reply; build: comments on issues (S31 detail); not yet on feed cards or tasks
 Photo albums,photos,should,yes,yes,S30 Albums observed; build: albums with counts and covers; move photos in and out; same name on two phones = one album
 Upload photos from phone,photos,should,yes,yes,"S30 upload FAB observed; build: gallery picker, copied into app storage"
 Correct or delete attendance and GRN entries with audit trail,labour,should,partial,partial,"users complain it is missing (src 11); build: attendance can be changed or cleared; audit trail is in the schema, not the fake layer; backend: attendance change/clear with server audit_log; GRN not built"
