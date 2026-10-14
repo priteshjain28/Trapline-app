@@ -300,6 +300,24 @@ class SyncTest {
         assertEquals(AppError.Reason.BAD_EMAIL, (b.app.updateProfile("Ravi", "not-an-email").exceptionOrNull() as AppError.Invalid).reason)
     }
 
+    @Test fun taskCategoriesSync() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val b = Phone("9876500000")
+        b.signIn(name = "Ravi", org = null)
+        val orgId = server.rows("organisations").first().s("id")!!
+        val ravi = server.rows("profiles").first { it.s("name") == "Ravi" }.s("id")!!
+        server.tables["org_members"]!!.values.removeIf { it.s("user_id") == ravi }
+        server.addMember(orgId, ravi)
+        b.app.verifyOtp(b.number, "123456").getOrThrow()
+        a.net.offline = true; b.net.offline = true
+        a.app.addCategory("Formwork").getOrThrow()
+        b.app.addCategory("formwork").getOrThrow()
+        a.net.offline = false; b.net.offline = false
+        a.sync(); b.sync(); a.sync()
+        assertEquals(1, server.rows("task_categories").size, "typed on two phones, one category")
+        assertEquals(1, b.app.categories().first().count { it.equals("formwork", true) })
+    }
+
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {
         val a = Phone("9876543210").apply { signIn() }
         val p = a.app.create(NewProject("Tower")).getOrThrow()

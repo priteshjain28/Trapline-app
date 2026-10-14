@@ -101,6 +101,7 @@ class FakeBackend(
         val orgRoles: Map<String, OrgRole> = emptyMap(),
         /** projectId -> pending invites */
         val invites: Map<String, List<app.site.core.model.PendingInvite>> = emptyMap(),
+        val categories: List<String> = emptyList(),
     )
 
     /** A stock_adjustments row: [qty] is signed, like the server's. */
@@ -286,6 +287,18 @@ class FakeBackend(
         rollUp(task.projectId)
         event(task.projectId, ActivityVerb.UPDATED_PROGRESS, task.id, task.name)
         return Result.success(u)
+    }
+
+    override fun categories(): Flow<List<String>> =
+        state.map { s -> app.site.core.logic.Categories.merge(s.categories, app.site.core.logic.Categories.COMMON, s.tasks.values.map { it.category }) }
+
+    override suspend fun addCategory(name: String): Result<String> {
+        io()
+        val n = Validate.category(name).getOrElse { return Result.failure(it) }
+        val existing = (state.value.categories + app.site.core.logic.Categories.COMMON).firstOrNull { it.equals(n, true) }
+        if (existing != null) return Result.success(existing)
+        state.update { it.copy(categories = it.categories + n) }
+        return Result.success(n)
     }
 
     private fun rollUp(projectId: String) = state.update { s ->

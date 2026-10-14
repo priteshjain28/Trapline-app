@@ -436,4 +436,7 @@
     <string name="part_material_body">Received, issued and used, and what\'s on site now</string>
     <string name="report_pdf_material">Material</string>
     <string name="report_pdf_material_row">in %1$s, out %2$s, on site %3$s %4$s</string>
+    <string name="action_new_category">New category</string>
+    <string name="field_new_category">New category</string>
+    <string name="action_add">Add</string>
 </resources>

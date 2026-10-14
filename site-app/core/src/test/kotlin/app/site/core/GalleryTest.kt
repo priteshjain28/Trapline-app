@@ -89,3 +89,25 @@ class TeamTest {
         assertIs<AppError.NotAllowed>(b.setRole(tower.id, team.members[0].userId, app.site.core.model.ProjectRole.VIEWER).exceptionOrNull())
     }
 }
+
+class CategoryTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun mergeRules() {
+        assertEquals(listOf("General", "civil", "Masonry"),
+            app.site.core.logic.Categories.merge(listOf("civil", " Masonry "), listOf("Civil", "General", "")))
+    }
+
+    @Test fun companyListGrowsAndStaysUnique() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
+        val start = b.categories().first()
+        assertEquals("General", start.first())
+        assertTrue("Finishing" in start && "MEP" in start, "common ones and ones on seed tasks")
+        assertEquals("Formwork", b.addCategory("  Formwork ").getOrThrow())
+        assertEquals("Formwork", b.addCategory("formwork").getOrThrow(), "same name, any case: the first spelling")
+        assertEquals("Civil", b.addCategory("CIVIL").getOrThrow())
+        assertEquals(start.size + 1, b.categories().first().size)
+        assertIs<AppError.Invalid>(b.addCategory(" ").exceptionOrNull())
+    }
+}

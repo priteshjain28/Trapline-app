@@ -41,6 +41,12 @@ CREATE TABLE task (
 );
 CREATE INDEX task_project ON task(project_id);
 
+CREATE TABLE task_category (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL
+);
+
 CREATE TABLE task_update (
   id TEXT NOT NULL PRIMARY KEY,
   task_id TEXT NOT NULL,
@@ -282,6 +288,15 @@ UPDATE task SET done_qty = ?, progress_pct = ?, status = ? WHERE id = ?;
 deleteTask:
 DELETE FROM task WHERE id = ?;
 
+upsertCategory:
+INSERT OR REPLACE INTO task_category VALUES ?;
+categoryNames:
+SELECT name FROM task_category;
+taskCategoryNames:
+SELECT DISTINCT category FROM task;
+deleteCategory:
+DELETE FROM task_category WHERE id = ?;
+
 upsertUpdate:
 INSERT OR REPLACE INTO task_update VALUES ?;
 updatesForTask:
@@ -483,6 +498,7 @@ wipe {
   DELETE FROM task_update;
   DELETE FROM media;
   DELETE FROM album;
+  DELETE FROM task_category;
   DELETE FROM org_member;
   DELETE FROM project_member;
   DELETE FROM invite;

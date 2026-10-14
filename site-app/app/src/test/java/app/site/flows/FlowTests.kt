@@ -114,6 +114,19 @@ class TaskFlows : FlowTest() {
         assertAccessible("S10 new task")
     }
 
+    @Test fun f07_H2_pickOrAddACategory() {
+        openTasks()
+        tap(button("Add task"))
+        type("Task name", "Shuttering slab 5")
+        tap(button("New category"))
+        type("New category", "Formwork")
+        tap(button("Add"))
+        compose.waitForIdle()
+        assertAccessible("S10 new task with categories")
+        tap(button("Add task"))
+        waitFor("Formwork", substring = true)
+    }
+
     @Test fun f07_E1_searchByNumberAndNoMatch() {
         openTasks()
         type("Search tasks by number or name", "#2")

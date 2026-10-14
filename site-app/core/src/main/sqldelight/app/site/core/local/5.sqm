@@ -1,0 +1,8 @@
+-- Version 5 -> 6: the company's task categories.
+
+CREATE TABLE task_category (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL
+);
+

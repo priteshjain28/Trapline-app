@@ -10,10 +10,10 @@ Five-tab project shell (Report Task Material Attendance More),platform,must,yes,
 Task list with search by id or name,tasks,must,yes,yes,S08 observed; build: S08
 Create task,tasks,must,yes,yes,S10 inferred; FAB on S08; build: S10
 Update task progress with photos and remarks,tasks,must,yes,yes,"S09 inferred; S27 ""Update Task Progress""; build: S09 qty or %, remarks, camera + gallery"
-Task categories,tasks,must,yes,partial,"S27 ""brick work (General)""; build: free text; no managed list"
+Task categories,tasks,must,yes,yes,"S27 ""brick work (General)""; build: company list (common ones + your own, synced; same name on two phones = one) picked as chips on S10"
 Task status filters (In Progress Delayed),tasks,must,yes,yes,S08 chips observed; build: S08 chips
 Report builder with date range,reports,must,yes,yes,S06 observed; build: S06
-Report parts checklist,reports,must,yes,partial,"S06 observed: 15+ parts; build: 4 parts (work, photos, labour, wages); material/issues/payables wait for those screens"
+Report parts checklist,reports,must,yes,partial,"S06 observed: 15+ parts; build: 5 parts (work, photos, labour, wages, material); issues and payables wait for those screens"
 Detailed (day-wise) report,reports,must,yes,yes,S06 observed; build: on-device PDF until the server worker exists
 Generated reports list,reports,must,yes,yes,"S07 observed; build: S07 open, share, retry"
 Share report file,reports,must,yes,yes,inferred; covers WhatsApp via share sheet; build: Android share sheet

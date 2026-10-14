@@ -82,6 +82,17 @@ object Validate {
         else -> Result.success(lines.groupBy { it.materialId }.map { (id, ls) -> app.site.core.model.MaterialLine(id, ls.sumOf { it.qty }) })
     }
 
+    const val CATEGORY_MAX = 60
+
+    fun category(name: String): Result<String> {
+        val n = name.trim().replace(Regex("\\s+"), " ")
+        return when {
+            n.isEmpty() -> fail("category", Reason.REQUIRED)
+            n.length > CATEGORY_MAX -> fail("category", Reason.TOO_LONG)
+            else -> Result.success(n)
+        }
+    }
+
     const val ALBUM_NAME_MAX = 60
 
     fun albumName(name: String): Result<String> {
@@ -196,4 +207,17 @@ object Stock {
     /** For a count: the correction that brings [current] to [counted]; null when nothing changes. */
     fun correction(current: Double, counted: Double): Double? =
         (counted - current).takeIf { kotlin.math.abs(it) > EPS }?.let { Math.round(it * 1000) / 1000.0 }
+}
+
+/** Task categories: what a new company starts with, and how lists are merged. */
+object Categories {
+    val COMMON = listOf("General", "Civil", "Masonry", "Concrete", "Steel", "Plumbing", "Electrical", "Finishing", "Painting", "MEP")
+
+    fun idFor(orgId: String, name: String): String =
+        java.util.UUID.nameUUIDFromBytes("category|$orgId|${name.trim().lowercase()}".toByteArray()).toString()
+
+    /** One entry per name ignoring case, first spelling wins; General first, then A to Z. */
+    fun merge(vararg lists: List<String>): List<String> =
+        lists.flatMap { it }.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
+            .sortedWith(compareBy({ !it.equals("General", true) }, { it.lowercase() }))
 }

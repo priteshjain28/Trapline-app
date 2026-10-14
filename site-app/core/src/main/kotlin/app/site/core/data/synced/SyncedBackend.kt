@@ -134,6 +134,7 @@ class SyncedBackend(
             "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine,
             "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
             "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum, "project_members" to q::deleteProjectMember,
+            "task_categories" to q::deleteCategory,
         ),
         restore = ::restore,
     )
@@ -404,6 +405,24 @@ class SyncedBackend(
         }
         syncNow()
         update(row)
+    }
+
+    override fun categories(): Flow<List<String>> =
+        combine(q.categoryNames().asFlow().mapToList(io), q.taskCategoryNames().asFlow().mapToList(io)) { mine, used ->
+            app.site.core.logic.Categories.merge(mine, app.site.core.logic.Categories.COMMON, used)
+        }
+
+    override suspend fun addCategory(name: String): Result<String> = call {
+        val org = _session.value?.org ?: throw AppError.NotAllowed
+        val n = Validate.category(name).getOrThrow()
+        (q.categoryNames().executeAsList() + app.site.core.logic.Categories.COMMON).firstOrNull { it.equals(n, true) }?.let { return@call it }
+        val id = app.site.core.logic.Categories.idFor(org.id, n)
+        db.transaction {
+            q.upsertCategory(app.site.core.local.Task_category(id, org.id, n))
+            engine.enqueueUpsert("task_categories", id, buildJsonObject { put("id", id); put("org_id", org.id); put("name", n) })
+        }
+        syncNow()
+        n
     }
 
     private fun task(r: TaskRow) = Task(
@@ -893,6 +912,9 @@ class SyncedBackend(
         SyncEngine.PullSpec("invites", "id,org_id,project_id,phone,project_role,accepted_at,created_at,updated_at", { o ->
             q.upsertInvite(InviteRow(o.str("id"), o.str("org_id"), o.strOrNull("project_id"), o.str("phone"), o.strOrNull("project_role"),
                 o.strOrNull("accepted_at"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("task_categories", "id,org_id,name,updated_at", { o ->
+            q.upsertCategory(app.site.core.local.Task_category(o.str("id"), o.str("org_id"), o.str("name")))
         }, { it.str("id") }),
         SyncEngine.PullSpec("albums", "id,project_id,name,updated_at", { o ->
             q.upsertAlbum(AlbumRow(o.str("id"), o.str("project_id"), o.str("name")))

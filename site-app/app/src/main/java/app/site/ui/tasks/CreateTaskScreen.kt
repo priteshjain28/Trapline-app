@@ -19,6 +19,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import app.site.design.components.TextAction
+import app.site.design.components.FilterChip
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import app.site.LocalContainer
@@ -45,7 +49,9 @@ fun CreateTaskScreen(projectId: String, onBack: () -> Unit, onCreated: (String) 
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     var name by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf("General") }
+    var newCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    val categories by remember { container.tasks.categories() }.collectAsStateWithLifecycle(initialValue = listOf("General"))
     var unit by rememberSaveable { mutableStateOf("") }
     var planned by rememberSaveable { mutableStateOf("") }
     var start by rememberSaveable { mutableStateOf<LocalDate?>(null) }
@@ -79,8 +85,28 @@ fun CreateTaskScreen(projectId: String, onBack: () -> Unit, onCreated: (String) 
             generalError(error)?.let { InfoBanner(it, tone = Tone.DANGER, icon = R.drawable.ic_circle_alert) }
             SiteTextField(name, { name = it; error = null }, stringResource(R.string.field_task_name), required = true,
                 placeholder = stringResource(R.string.field_task_name_placeholder), error = fieldError(error, "name"))
-            SiteTextField(category, { category = it }, stringResource(R.string.field_category),
-                placeholder = stringResource(R.string.field_category_placeholder))
+            // the company's list, so "Masonry" isn't typed five ways
+            Column(verticalArrangement = Arrangement.spacedBy(Space.s2)) {
+                androidx.compose.material3.Text(stringResource(R.string.field_category),
+                    style = SiteTheme.type.sm.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.W600), color = SiteTheme.colors.text)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.s2)) {
+                    (categories + listOf(category)).distinct().forEach { c -> FilterChip(c, c == category, { category = c }) }
+                }
+                val typed = newCategory
+                if (typed == null) {
+                    TextAction(stringResource(R.string.action_new_category), { newCategory = "" }, icon = R.drawable.ic_plus)
+                } else {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Space.s2)) {
+                        SiteTextField(typed, { newCategory = it.take(60) }, stringResource(R.string.field_new_category), Modifier.weight(1f),
+                            placeholder = stringResource(R.string.field_category_placeholder), error = fieldError(error, "category"))
+                        app.site.design.components.SecondaryButton(stringResource(R.string.action_add), {
+                            scope.launch {
+                                container.tasks.addCategory(typed).onSuccess { category = it; newCategory = null }.onFailure { error = it }
+                            }
+                        }, enabled = typed.isNotBlank())
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(Space.s3)) {
                 SiteTextField(planned, { planned = it }, stringResource(R.string.field_planned_qty), Modifier.weight(1f),
                     keyboardType = KeyboardType.Decimal,

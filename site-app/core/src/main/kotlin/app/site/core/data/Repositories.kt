@@ -90,6 +90,10 @@ interface TaskRepository {
     fun updatesInRange(projectId: String, from: LocalDate, to: LocalDate): Flow<List<TaskUpdate>>
     suspend fun create(input: NewTask): Result<Task>
     suspend fun addUpdate(input: NewTaskUpdate): Result<TaskUpdate>
+    /** The company's task categories, the common ones and any already used on tasks; sorted, no duplicates. */
+    fun categories(): Flow<List<String>>
+    /** Adds a category to the company's list (or returns the existing one with that name). */
+    suspend fun addCategory(name: String): Result<String>
 }
 
 interface AttendanceRepository {
