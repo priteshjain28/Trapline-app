@@ -80,3 +80,16 @@ Also built after the top five: a Material part in reports, and a managed list of
 31 of 33. Left: the in-app camera (S32; the phone's camera app works today) and the report parts that need screens not
 built yet (issues, payables). Cosmetic, seen in screenshots: on S14 the date field is a little shorter than the challan
 field beside it.
+
+## Last must-haves (2026-10-14)
+
+| ID | date | state | missing | harder than expected |
+| --- | --- | --- | --- | --- |
+| S31 issues | 2026-10-14 | done | Photos on an issue; issues raised by the server (the original's inactivity issues are a daily nudge here instead) | `issues` was already the name of material issued; the repository uses siteIssues |
+| S23 payables | 2026-10-14 | done | Payables for subcontractors and purchase orders (those screens come first) | Same never-pay-twice rule as the server's preview |
+| S26 expenses | 2026-10-14 | done | Editing or voiding an entry | – |
+| S32 camera | 2026-10-14 | done | Video (a could) | Can't run under Robolectric: the test covers the permission path; the shutter needs a phone |
+| Report parts | 2026-10-14 | done | Subcontractor and purchase-order parts | – |
+
+Must-haves 33 of 33. Found along the way: the manifest had no INTERNET permission (BUG-008), so the real mode
+could not have worked; fixed. A duplicate string name broke one CI run; a strings check now runs first in CI.

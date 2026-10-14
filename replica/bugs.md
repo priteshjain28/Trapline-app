@@ -129,6 +129,23 @@ and no ellipsis), avatar initials spill out of the circle
 Evidence: replica/test-screens/font-200-projects.png, font-200-tasks.png (at ae36acc)
 Status: fixed in 58ad75d (nav labels stop growing at 1.3x, dates wrap to two lines, initials sized to the circle; re-recorded screenshots checked)
 
+### BUG-008: the app doesn't declare the INTERNET permission
+
+- Severity: S1 if real (the Supabase mode could not sign in or sync at all); the demo is unaffected
+- Flow / case: F10 sign in, every sync
+- Screen: all, real mode only
+- Build: 1a9391c  Device: found reading `AndroidManifest.xml` during `/replica-build`, not on a phone
+
+Steps
+1. Build with SUPABASE_URL and SUPABASE_ANON_KEY set
+2. Sign in
+
+Expected: the code SMS is requested from Supabase
+Actual (expected from the manifest): network calls fail with a SecurityException / "permission denied"
+Evidence: `site-app/app/src/main/AndroidManifest.xml` had no `<uses-permission android:name="android.permission.INTERNET">`.
+Not confirmed whether a library's manifest merged it in; declaring it is correct either way.
+Status: fixed in cf80635 (INTERNET and ACCESS_NETWORK_STATE declared). Confirm on a phone in real mode (manual checklist).
+
 ## To check (not reproduced)
 
 - Photo remove button on a pending update is 32dp (TaskDetailScreen `PhotoStrip`). Needs a test that picks a photo.
