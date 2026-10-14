@@ -50,6 +50,8 @@ class ReportService(
             val file = renderer.render(r.id, content)
             reports.markReady(r.id, file.absolutePath)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.w("ReportService", "report ${r.id} failed", e)
             reports.markFailed(r.id)
         }
     }

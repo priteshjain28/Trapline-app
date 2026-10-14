@@ -288,7 +288,8 @@ class ReportAndFeedFlows : FlowTest() {
         tap(button("Create report"))
         waitFor("Detailed · 13 Oct 2026")
         compose.waitUntil(15_000) { showsDesc("Open") || shows("Couldn't make it") }
-        assertTrue("the PDF was made", showsDesc("Open"))
+        val why = org.robolectric.shadows.ShadowLog.getLogsForTag("ReportService").map { it.throwable?.stackTraceToString()?.take(1500) }
+        assertTrue("the PDF was made; $why", showsDesc("Open"))
         assertAccessible("S07 reports")
     }
 
