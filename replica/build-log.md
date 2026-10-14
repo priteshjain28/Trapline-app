@@ -44,3 +44,11 @@ Must-haves: 18 of 33 done (`parity.py`: 47/100 overall). CI green on 2026-10-14:
   so raise both before `/replica-deploy`.
 - **Hindi:** strings are English only for now. All copy is in `strings.xml`, so `values-hi/` is a translation job,
   not a code change.
+
+## Backend (2026-10-14)
+
+`/replica-backend`: Supabase schema + 4 follow-up migrations, 7 Edge Functions, and an offline-first data layer
+(SQLDelight + outbox + sync) behind the same repository interfaces. With `SUPABASE_URL`/`SUPABASE_ANON_KEY` set at
+build time the app uses it; without them it stays the demo. CI green: `site-app.yml` (29 core tests, APK, screenshots)
+and `backend.yml` (database tests on Postgres 16, Deno tests and type-check). Not yet run against a real Supabase
+project, which needs the user's keys. See `replica/backend.md`. Parity 50.9 (20 of 33 must-haves).
