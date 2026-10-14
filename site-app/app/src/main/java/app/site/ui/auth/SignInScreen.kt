@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.site.LocalContainer
 import app.site.R
 import app.site.core.data.fake.FakeBackend
@@ -53,6 +54,8 @@ fun SignInScreen(onSignedIn: () -> Unit) {
     var phone by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
+    var orgName by rememberSaveable { mutableStateOf("") }
+    val session by container.session.session.collectAsStateWithLifecycle()
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
 
@@ -115,7 +118,7 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                     busy = true
                     scope.launch {
                         container.session.verifyOtp(phone, code)
-                            .onSuccess { s -> if (s.user.name.isBlank()) step = Step.NAME else onSignedIn() }
+                            .onSuccess { s -> if (s.needsSetup) { name = s.user.name; step = Step.NAME } else onSignedIn() }
                             .onFailure { error = it }
                         busy = false
                     }
@@ -127,10 +130,22 @@ fun SignInScreen(onSignedIn: () -> Unit) {
                     name, { name = it.take(60) }, label = stringResource(R.string.field_your_name),
                     placeholder = stringResource(R.string.field_your_name_placeholder), imeAction = ImeAction.Done, required = true,
                 )
+                if (session?.org == null) {
+                    SiteTextField(
+                        orgName, { orgName = it.take(80) }, label = stringResource(R.string.field_org_name),
+                        placeholder = stringResource(R.string.field_org_name_placeholder), imeAction = ImeAction.Done,
+                        helper = stringResource(R.string.field_org_name_helper),
+                    )
+                }
                 PrimaryButton(stringResource(R.string.action_continue), {
-                    container.updateProfileName(name)
-                    onSignedIn()
-                }, large = true, enabled = name.isNotBlank())
+                    busy = true
+                    scope.launch {
+                        container.session.completeProfile(name, orgName.ifBlank { null })
+                            .onSuccess { onSignedIn() }
+                            .onFailure { error = it }
+                        busy = false
+                    }
+                }, large = true, loading = busy, enabled = name.isNotBlank())
             }
         }
         VSpace(Space.s4)

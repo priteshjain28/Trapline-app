@@ -49,10 +49,10 @@ class ScreenshotTest {
     private lateinit var brickworkId: String
 
     @Before fun setUp() {
-        container = AppContainer(ApplicationProvider.getApplicationContext(), clock, latencyMs = 0)
+        container = AppContainer(ApplicationProvider.getApplicationContext(), clock, latencyMs = 0, forceDemo = true)
         runBlocking {
             container.session.verifyOtp("9876543210", "123456").getOrThrow()
-            container.updateProfileName("Anita Rao")
+            container.session.completeProfile("Anita Rao", null).getOrThrow()
             towerId = container.projects.projects().first().first { it.name == "Green Park Tower B" }.id
             brickworkId = container.tasks.tasks(towerId).first().first { it.number == 2 }.id
         }

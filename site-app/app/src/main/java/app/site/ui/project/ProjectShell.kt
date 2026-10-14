@@ -79,6 +79,7 @@ fun ProjectShell(
 
     Scaffold(
         topBar = {
+          Column {
             AppBarProject(
                 orgName = session?.org?.name.orEmpty(),
                 projectName = project?.name.orEmpty(),
@@ -87,6 +88,8 @@ fun ProjectShell(
                 onMessages = { onPlanned(Planned.MESSAGES) },
                 onHelp = { onPlanned(Planned.HELP) },
             )
+            app.site.ui.SyncBanner()
+          }
         },
         bottomBar = { BottomNav(items, tab) { tab = it } },
         containerColor = SiteTheme.colors.bg,

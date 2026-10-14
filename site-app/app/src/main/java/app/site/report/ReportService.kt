@@ -13,15 +13,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Queues a report and renders it in the background. Today the renderer runs on the phone;
- * with the backend, the server-side worker renders and this only queues.
+ * Queues a report and renders it on the phone in the background. Android's text engine shapes Indian scripts
+ * correctly, so no server-side PDF worker is needed; the finished PDF uploads with the next sync.
+ * Photos taken on other phones are drawn as placeholders until they've been viewed (and cached) here.
  */
 class ReportService(
     private val projects: ProjectRepository,
     private val tasks: TaskRepository,
     private val attendance: AttendanceRepository,
     private val reports: ReportRepository,
-    private val people: () -> Map<String, User>,
+    private val people: suspend () -> Map<String, User>,
     private val renderer: PdfReportRenderer,
     private val scope: CoroutineScope,
 ) {

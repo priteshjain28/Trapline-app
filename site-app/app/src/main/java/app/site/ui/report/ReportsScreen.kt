@@ -61,6 +61,13 @@ fun ReportsScreen(projectId: String, onBack: () -> Unit) {
     val project by projectFlow.collectAsStateWithLifecycle(initialValue = null)
     val shareTitle = stringResource(R.string.action_share)
 
+    /** The PDF on this phone, downloading it first if another phone made it. */
+    fun withFile(r: Report, then: (File) -> Unit) = scope.launch {
+        container.reports.fetchFile(r.id)
+            .onSuccess { then(File(it)) }
+            .onFailure { snack.showSnackbar(context.getString(R.string.err_report_download)) }
+    }
+
     fun launch(intent: Intent) {
         try { context.startActivity(intent) } catch (e: ActivityNotFoundException) { scope.launch { snack.showSnackbar(noApp) } }
     }
@@ -79,11 +86,11 @@ fun ReportsScreen(projectId: String, onBack: () -> Unit) {
             items(reports, key = { it.id }) { r ->
                 ReportRow(
                     r,
-                    onOpen = { f -> launch(container.photos.viewIntent(f, "application/pdf")) },
-                    onShare = { f ->
+                    onOpen = { withFile(r) { f -> launch(container.photos.viewIntent(f, "application/pdf")) } },
+                    onShare = { withFile(r) { f ->
                         val subject = "${project?.name.orEmpty()} – ${Format.range(r.from, r.to, container.today())}"
                         launch(Intent.createChooser(container.photos.shareIntent(f, "application/pdf", subject), shareTitle))
-                    },
+                    } },
                     onRetry = { container.reportService.retry(r) },
                 )
             }
@@ -94,11 +101,11 @@ fun ReportsScreen(projectId: String, onBack: () -> Unit) {
 private val createdFmt = DateTimeFormatter.ofPattern("d MMM, h:mm a", Locale.ENGLISH)
 
 @Composable
-private fun ReportRow(r: Report, onOpen: (File) -> Unit, onShare: (File) -> Unit, onRetry: () -> Unit) {
+private fun ReportRow(r: Report, onOpen: () -> Unit, onShare: () -> Unit, onRetry: () -> Unit) {
     val c = SiteTheme.colors
     val container = LocalContainer.current
-    val file = r.filePath?.let { File(it) }?.takeIf { it.exists() }
-    ListRow(onClick = if (file != null) ({ onOpen(file) }) else null) {
+    val ready = r.status == ReportStatus.READY
+    ListRow(onClick = if (ready) onOpen else null) {
         Column(Modifier.weight(1f)) {
             val kind = stringResource(if (r.type == ReportType.DETAILED) R.string.report_type_detailed else R.string.report_type_summary)
             Text("$kind · ${Format.range(r.from, r.to, container.today())}", style = SiteTheme.type.base.copy(fontWeight = FontWeight.W600), color = c.text)
@@ -114,12 +121,9 @@ private fun ReportRow(r: Report, onOpen: (File) -> Unit, onShare: (File) -> Unit
                 StatusBadge(stringResource(R.string.report_failed), Tone.DANGER)
                 TextAction(stringResource(R.string.action_retry), onRetry)
             }
-            ReportStatus.READY -> if (file != null) {
-                SiteIconButton(R.drawable.ic_external_link, stringResource(R.string.action_open), { onOpen(file) }, tint = c.accent)
-                SiteIconButton(R.drawable.ic_share_2, stringResource(R.string.action_share), { onShare(file) }, tint = c.accent)
-            } else {
-                StatusBadge(stringResource(R.string.report_missing), Tone.WARNING)
-                TextAction(stringResource(R.string.action_retry), onRetry)
+            ReportStatus.READY -> {
+                SiteIconButton(R.drawable.ic_external_link, stringResource(R.string.action_open), onOpen, tint = c.accent)
+                SiteIconButton(R.drawable.ic_share_2, stringResource(R.string.action_share), onShare, tint = c.accent)
             }
         }
     }

@@ -17,13 +17,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.site.LocalContainer
 import app.site.R
+import app.site.core.data.AppError
 import app.site.core.model.ActivityEvent
 import app.site.core.model.ActivityVerb
 import app.site.design.Radius
@@ -54,6 +58,8 @@ import app.site.design.components.SiteCard
 import app.site.design.components.SiteIcon
 import app.site.design.components.SiteTextField
 import app.site.design.components.Tabs
+import app.site.design.components.TextAction
+import kotlinx.coroutines.launch
 import app.site.ui.Planned
 import java.time.Duration
 import java.time.Instant
@@ -197,6 +203,9 @@ fun ProfileScreen(onBack: () -> Unit) {
     val session by container.session.session.collectAsStateWithLifecycle()
     val c = SiteTheme.colors
     var name by rememberSaveable(session?.user?.id) { mutableStateOf(session?.user?.name.orEmpty()) }
+    val scope = rememberCoroutineScope()
+    var confirmDelete by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
     Scaffold(topBar = { AppBarSub(stringResource(R.string.profile_title), onBack) }, containerColor = c.bg) { padding ->
         val s = session ?: return@Scaffold
         Column(
@@ -206,14 +215,36 @@ fun ProfileScreen(onBack: () -> Unit) {
         ) {
             Avatar(s.user.name.ifBlank { "?" }, size = Size.avatarLg)
             SiteTextField(name, { name = it.take(60) }, stringResource(R.string.field_your_name), required = true)
-            PrimaryButton(stringResource(R.string.action_save), { container.updateProfileName(name) },
+            PrimaryButton(stringResource(R.string.action_save), { scope.launch { container.session.completeProfile(name, null) } },
                 Modifier.fillMaxWidth(), enabled = name.isNotBlank() && name.trim() != s.user.name)
             ProfileLine(stringResource(R.string.field_phone), s.user.phone, verified = true)
-            ProfileLine(stringResource(R.string.profile_org), s.org.name)
+            ProfileLine(stringResource(R.string.profile_org), s.org?.name.orEmpty())
             ProfileLine(stringResource(R.string.profile_role), stringResource(R.string.role_owner))
             SecondaryButton(stringResource(R.string.action_sign_out), { container.session.signOut() }, Modifier.fillMaxWidth(),
                 icon = R.drawable.ic_log_out)
+            TextAction(stringResource(R.string.action_delete_account), { confirmDelete = true })
+            deleteError?.let { Text(it, style = SiteTheme.type.sm, color = c.danger) }
         }
+    }
+    if (confirmDelete) {
+        val ownerMustTransfer = stringResource(R.string.err_owner_must_transfer)
+        val generic = stringResource(R.string.err_unknown)
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.delete_account_title)) },
+            text = { Text(stringResource(R.string.delete_account_body)) },
+            confirmButton = {
+                TextButton({
+                    confirmDelete = false
+                    scope.launch {
+                        container.session.deleteAccount().onFailure {
+                            deleteError = if (it is AppError.OwnerMustTransfer) ownerMustTransfer else generic
+                        }
+                    }
+                }) { Text(stringResource(R.string.action_delete_account), color = c.danger) }
+            },
+            dismissButton = { TextButton({ confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
 }
 

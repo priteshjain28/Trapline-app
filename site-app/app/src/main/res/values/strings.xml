@@ -16,6 +16,9 @@
     <string name="field_code">6-digit code</string>
     <string name="field_your_name">Your name</string>
     <string name="field_your_name_placeholder">e.g. Anita Rao</string>
+    <string name="field_org_name">Company name</string>
+    <string name="field_org_name_placeholder">e.g. Rao Builders</string>
+    <string name="field_org_name_helper">Your projects and team sit under it. You can change it later.</string>
 
     <!-- projects -->
     <string name="projects_title">Projects</string>
@@ -151,7 +154,6 @@
     <string name="report_created">Made %1$s</string>
     <string name="report_making">Making…</string>
     <string name="report_failed">Couldn\'t make it</string>
-    <string name="report_missing">File missing</string>
     <string name="report_pdf_nothing">Nothing was recorded in this period.</string>
     <string name="report_pdf_total_updates">%1$d updates</string>
     <string name="report_pdf_total_photos">%1$d photos</string>
@@ -260,6 +262,15 @@
     <string name="err_ot_hours">Enter between 0 and 16 hours</string>
     <string name="err_no_pdf_app">No app on this phone can open PDFs. Try Share instead.</string>
     <string name="err_unknown">Something went wrong. Try again.</string>
+    <string name="err_plan_limit_projects">The free plan has room for 3 active sites. Archive one or upgrade to add more.</string>
+    <string name="err_owner_must_transfer">You\'re the only owner and others are still in your company. Make someone else an owner first.</string>
+    <string name="err_report_download">Couldn\'t download the report. Check your connection and try again.</string>
+    <string name="sync_offline">Offline. %1$d changes will upload when you\'re back online.</string>
+    <string name="sync_pending">%1$d changes waiting to upload</string>
+    <string name="sync_rejected">%1$d changes weren\'t allowed and were undone on this phone</string>
+    <string name="action_delete_account">Delete my account</string>
+    <string name="delete_account_title">Delete your account?</string>
+    <string name="delete_account_body">Your login and profile are removed for good. Work you logged stays with your company.</string>
 
     <!-- accessibility -->
     <string name="offline_banner">Offline – changes will upload when you\'re back online</string>

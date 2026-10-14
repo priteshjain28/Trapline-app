@@ -66,6 +66,7 @@ fun ProjectsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onProfile: () ->
 
     Scaffold(
         topBar = {
+          Column {
             AppBarOrg(
                 orgName = session?.org?.name.orEmpty(),
                 plan = stringResource(if (session?.org?.plan == Plan.FREE) R.string.plan_free else R.string.plan_paid),
@@ -73,6 +74,8 @@ fun ProjectsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onProfile: () ->
                 onProfile = onProfile,
                 onMessages = { onPlanned(Planned.MESSAGES) },
             )
+            app.site.ui.SyncBanner()
+          }
         },
         floatingActionButton = { SiteFab(stringResource(R.string.action_new_project), R.drawable.ic_plus, onNew) },
         containerColor = SiteTheme.colors.bg,

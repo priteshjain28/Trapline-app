@@ -76,6 +76,8 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
     val task by taskFlow.collectAsStateWithLifecycle(initialValue = null)
     val updatesFlow = remember(taskId) { container.tasks.updates(taskId) }
     val updates by updatesFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val peopleFlow = remember { container.people.people() }
+    val people by peopleFlow.collectAsStateWithLifecycle(initialValue = emptyMap())
     val snack = remember { SnackbarHostState() }
     val savedText = stringResource(R.string.toast_update_saved)
 
@@ -171,7 +173,7 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
             if (updates.isEmpty()) item {
                 EmptyState(R.drawable.ic_clock, stringResource(R.string.task_history_empty_title), stringResource(R.string.task_history_empty_body))
             }
-            items(updates, key = { it.id }) { u -> UpdateRow(u, t, container.personName(u.authorId)) }
+            items(updates, key = { it.id }) { u -> UpdateRow(u, t, people[u.authorId]?.name.orEmpty()) }
         }
     }
 }
@@ -211,7 +213,7 @@ private fun PhotoStrip(photos: List<String>, onRemove: ((String) -> Unit)?) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Space.s2)) {
         photos.forEach { uri ->
             Box(Modifier.size(Size.thumb).clip(Radius.md).background(SiteTheme.colors.surfaceTrack)) {
-                AsyncImage(model = uri, contentDescription = stringResource(R.string.a11y_photo), contentScale = ContentScale.Crop,
+                AsyncImage(model = app.site.ui.photoModel(uri), contentDescription = stringResource(R.string.a11y_photo), contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize())
                 if (onRemove != null) {
                     SiteIconButton(R.drawable.ic_x, stringResource(R.string.a11y_remove_photo), { onRemove(uri) },
