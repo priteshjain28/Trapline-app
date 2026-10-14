@@ -123,6 +123,32 @@ CREATE TABLE activity (
 );
 CREATE INDEX activity_project ON activity(project_id, created_at);
 
+-- People and roles. Owners and admins of the company manage every site.
+CREATE TABLE org_member (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL
+);
+
+CREATE TABLE project_member (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL
+);
+CREATE INDEX project_member_project ON project_member(project_id);
+
+CREATE TABLE invite (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  project_id TEXT,
+  phone TEXT NOT NULL,
+  project_role TEXT,
+  accepted_at TEXT,
+  created_at TEXT NOT NULL
+);
+
 -- Material. Stock is never stored: it is the sum of these rows, like the server's stock_movements ledger.
 CREATE TABLE material (
   id TEXT NOT NULL PRIMARY KEY,
@@ -332,6 +358,33 @@ SELECT * FROM activity WHERE project_id = ? ORDER BY created_at DESC;
 deleteActivity:
 DELETE FROM activity WHERE id = ?;
 
+-- ---------------------------------------------------------------- team
+
+upsertOrgMember:
+INSERT OR REPLACE INTO org_member VALUES ?;
+orgMembers:
+SELECT * FROM org_member WHERE org_id = ?;
+deleteOrgMember:
+DELETE FROM org_member WHERE id = ?;
+
+upsertProjectMember:
+INSERT OR REPLACE INTO project_member VALUES ?;
+projectMembers:
+SELECT * FROM project_member WHERE project_id = ?;
+projectMemberOne:
+SELECT * FROM project_member WHERE project_id = ? AND user_id = ?;
+setProjectMemberRole:
+UPDATE project_member SET role = ? WHERE id = ?;
+deleteProjectMember:
+DELETE FROM project_member WHERE id = ?;
+
+upsertInvite:
+INSERT OR REPLACE INTO invite VALUES ?;
+pendingInvites:
+SELECT * FROM invite WHERE project_id = ? AND accepted_at IS NULL ORDER BY created_at DESC;
+deleteInvite:
+DELETE FROM invite WHERE id = ?;
+
 -- ---------------------------------------------------------------- material
 
 upsertMaterial:
@@ -425,6 +478,9 @@ wipe {
   DELETE FROM task_update;
   DELETE FROM media;
   DELETE FROM album;
+  DELETE FROM org_member;
+  DELETE FROM project_member;
+  DELETE FROM invite;
   DELETE FROM worker;
   DELETE FROM attendance;
   DELETE FROM report;

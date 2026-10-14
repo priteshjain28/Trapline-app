@@ -19,6 +19,8 @@ import app.site.core.remote.RemoteError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import app.site.core.model.AdjustmentKind
+import app.site.core.model.OrgRole
+import app.site.core.model.ProjectRole
 import app.site.core.model.MaterialLine
 import app.site.core.model.NewAdjustment
 import app.site.core.model.NewGrn
@@ -215,6 +217,49 @@ class SyncTest {
         b.sync(); a.sync()
         assertNull(server.rows("media").single().s("album_id"))
         assertEquals(0, a.app.albums(p.id).first().single().photoCount)
+    }
+
+    @Test fun inviteSomeoneToASite() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val p = a.app.create(NewProject("Tower")).getOrThrow()
+        a.sync()
+        assertTrue(a.app.team(p.id).first().canManage, "the owner manages every site")
+
+        assertEquals(false, a.app.invite(p.id, "98765 00000", ProjectRole.ENGINEER).getOrThrow(), "the fake server sends no SMS")
+        a.sync()
+        assertEquals("+919876500000", a.app.team(p.id).first().invites.single().phone)
+
+        // Ravi signs in for the first time and is already on the site
+        val b = Phone("9876500000")
+        b.signIn(name = "Ravi", org = null)
+        b.sync()
+        assertEquals(listOf("Tower"), b.app.projects().first().map { it.name })
+        assertTrue(!b.app.team(p.id).first().canManage, "an engineer doesn't manage")
+
+        a.sync()
+        val team = a.app.team(p.id).first()
+        assertTrue(team.invites.isEmpty(), "accepted invites leave the list")
+        val ravi = team.members.single { it.name == "Ravi" }
+        assertEquals(ProjectRole.ENGINEER, ravi.role)
+        assertEquals(OrgRole.OWNER, team.members.single { it.name == "Anita" }.orgRole)
+
+        // inviting him again is refused in plain words
+        val again = a.app.invite(p.id, "9876500000", ProjectRole.VIEWER).exceptionOrNull()
+        assertEquals(AppError.Reason.ALREADY_MEMBER, (again as AppError.Invalid).reason)
+
+        a.app.setRole(p.id, ravi.userId, ProjectRole.SUPERVISOR).getOrThrow()
+        a.sync(); b.sync()
+        assertEquals("supervisor", server.rows("project_members").single().s("role"))
+        assertEquals(ProjectRole.SUPERVISOR, b.app.team(p.id).first().members.single { it.name == "Ravi" }.role)
+
+        a.app.remove(p.id, ravi.userId).getOrThrow()
+        a.sync(); b.sync()
+        assertTrue(server.rows("project_members").isEmpty())
+        assertTrue(b.app.team(p.id).first().members.none { it.name == "Ravi" })
+
+        // inviting needs a connection: the server sends the SMS
+        a.net.offline = true
+        assertIs<AppError.Offline>(a.app.invite(p.id, "9876511111", ProjectRole.VIEWER).exceptionOrNull())
     }
 
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {

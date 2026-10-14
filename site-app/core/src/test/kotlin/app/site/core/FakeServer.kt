@@ -182,7 +182,28 @@ class FakeServer {
         override suspend fun rpc(function: String, args: JsonObject): JsonElement {
             net()
             return when (function) {
-                "accept_invites" -> JsonPrimitive(0)
+                "accept_invites" -> {
+                    // same as public.accept_invites(): pending invites for this phone become memberships
+                    val me = uid()
+                    val phone = table("profiles")[me]?.s("phone")
+                    val pending = rows("invites").filter { it.s("phone") == phone && it.s("accepted_at") == null }
+                    for (i in pending) {
+                        if (rows("org_members").none { it.s("org_id") == i.s("org_id") && it.s("user_id") == me }) {
+                            put("org_members", buildJsonObject {
+                                put("id", UUID.randomUUID().toString()); put("org_id", i.s("org_id")); put("user_id", me); put("role", i.s("org_role") ?: "member")
+                            })
+                        }
+                        i.s("project_id")?.let { pid ->
+                            if (rows("project_members").none { it.s("project_id") == pid && it.s("user_id") == me }) {
+                                put("project_members", buildJsonObject {
+                                    put("id", UUID.randomUUID().toString()); put("project_id", pid); put("user_id", me); put("role", i.s("project_role") ?: "engineer")
+                                })
+                            }
+                        }
+                        put("invites", JsonObject(i + ("accepted_at" to JsonPrimitive(stamp()))))
+                    }
+                    JsonPrimitive(pending.size)
+                }
                 "create_organisation" -> JsonPrimitive(createOrg(uid(), args.s("p_name")!!))
                 else -> error("rpc $function not in the fake")
             }
@@ -192,6 +213,15 @@ class FakeServer {
         override suspend fun function(name: String, body: JsonObject): JsonElement {
             net()
             if (name == "delete-account") table("profiles").remove(uid())
+            if (name == "invite") {
+                val id = UUID.randomUUID().toString()
+                put("invites", buildJsonObject {
+                    put("id", id); put("org_id", body.s("org_id")); put("project_id", body.s("project_id")); put("phone", body.s("phone"))
+                    put("org_role", body.s("org_role") ?: "member"); put("project_role", body.s("project_role")); put("invited_by", uid())
+                    put("created_at", stamp())
+                })
+                return buildJsonObject { put("invite_id", id); put("sms_sent", false) }
+            }
             return JsonNull
         }
 

@@ -16,6 +16,7 @@ import app.site.ui.attendance.AddWorkerScreen
 import app.site.ui.attendance.AttendanceSettingsScreen
 import app.site.ui.auth.SignInScreen
 import app.site.ui.gallery.GalleryScreen
+import app.site.ui.team.TeamScreen
 import app.site.ui.material.AddMaterialScreen
 import app.site.ui.material.IssueScreen
 import app.site.ui.material.MaterialDetailScreen
@@ -49,6 +50,7 @@ object Routes {
     const val ISSUE = "project/{pid}/material/issue"
     const val MATERIAL = "project/{pid}/stock/{mid}"
     const val GALLERY = "project/{pid}/gallery"
+    const val TEAM = "project/{pid}/team"
     const val ALBUM = "project/{pid}/albums/{aid}"
 
     fun project(pid: String, tab: Int = 0) = "project/$pid?tab=$tab"
@@ -123,9 +125,18 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                 onReports = { nav.navigate(Routes.reports(projectId)) },
                 onFeed = { nav.navigate(Routes.feed(projectId)) },
                 onAttendanceSettings = { nav.navigate(Routes.attendanceSettings(projectId)) },
-                onPlanned = { if (it == Planned.GALLERY) nav.navigate(Routes.gallery(projectId)) else nav.navigate(Routes.planned(it)) },
+                onPlanned = {
+                    when (it) {
+                        Planned.GALLERY -> nav.navigate(Routes.gallery(projectId))
+                        Planned.MEMBERS -> nav.navigate("project/$projectId/team")
+                        else -> nav.navigate(Routes.planned(it))
+                    }
+                },
                 onMaterial = { nav.navigate(Routes.material(projectId, it)) },
             )
+        }
+        composable(Routes.TEAM, listOf(pid)) { e ->
+            TeamScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() })
         }
         composable(Routes.GALLERY, listOf(pid)) { e ->
             val projectId = e.arguments?.getString("pid").orEmpty()

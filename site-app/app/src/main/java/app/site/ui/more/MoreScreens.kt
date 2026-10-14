@@ -61,6 +61,7 @@ import app.site.design.components.Tabs
 import app.site.design.components.TextAction
 import kotlinx.coroutines.launch
 import app.site.ui.Planned
+import app.site.ui.label
 import java.time.Duration
 import java.time.Instant
 
@@ -204,7 +205,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                 Modifier.fillMaxWidth(), enabled = name.isNotBlank() && name.trim() != s.user.name)
             ProfileLine(stringResource(R.string.field_phone), s.user.phone, verified = true)
             ProfileLine(stringResource(R.string.profile_org), s.org?.name.orEmpty())
-            ProfileLine(stringResource(R.string.profile_role), stringResource(R.string.role_owner))
+            ProfileLine(stringResource(R.string.profile_role), stringResource((session?.orgRole ?: app.site.core.model.OrgRole.MEMBER).label()))
             SecondaryButton(stringResource(R.string.action_sign_out), { container.session.signOut() }, Modifier.fillMaxWidth(),
                 icon = R.drawable.ic_log_out)
             TextAction(stringResource(R.string.action_delete_account), { confirmDelete = true })

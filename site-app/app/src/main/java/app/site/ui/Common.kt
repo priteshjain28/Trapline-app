@@ -22,6 +22,7 @@ fun errorRes(e: Throwable): Int = when (e) {
         AppError.Reason.BAD_PHONE -> R.string.err_bad_phone
         AppError.Reason.NOT_ENOUGH_STOCK -> R.string.err_not_enough_stock
         AppError.Reason.IN_FUTURE -> R.string.err_in_future
+        AppError.Reason.ALREADY_MEMBER -> R.string.err_already_member
     }
     is AppError.PlanLimit -> R.string.err_plan_limit_projects
     is AppError.OwnerMustTransfer -> R.string.err_owner_must_transfer
@@ -69,4 +70,31 @@ enum class Planned(val id: String, @StringRes val title: Int) {
     companion object {
         fun byId(id: String?) = entries.firstOrNull { it.id == id }
     }
+}
+
+@StringRes
+fun app.site.core.model.ProjectRole.label(): Int = when (this) {
+    app.site.core.model.ProjectRole.MANAGER -> R.string.role_manager
+    app.site.core.model.ProjectRole.ENGINEER -> R.string.role_engineer
+    app.site.core.model.ProjectRole.SUPERVISOR -> R.string.role_supervisor
+    app.site.core.model.ProjectRole.STOREKEEPER -> R.string.role_storekeeper
+    app.site.core.model.ProjectRole.ACCOUNTANT -> R.string.role_accountant
+    app.site.core.model.ProjectRole.VIEWER -> R.string.role_viewer
+}
+
+@StringRes
+fun app.site.core.model.ProjectRole.body(): Int = when (this) {
+    app.site.core.model.ProjectRole.MANAGER -> R.string.role_manager_body
+    app.site.core.model.ProjectRole.ENGINEER -> R.string.role_engineer_body
+    app.site.core.model.ProjectRole.SUPERVISOR -> R.string.role_supervisor_body
+    app.site.core.model.ProjectRole.STOREKEEPER -> R.string.role_storekeeper_body
+    app.site.core.model.ProjectRole.ACCOUNTANT -> R.string.role_accountant_body
+    app.site.core.model.ProjectRole.VIEWER -> R.string.role_viewer_body
+}
+
+@StringRes
+fun app.site.core.model.OrgRole.label(): Int = when (this) {
+    app.site.core.model.OrgRole.OWNER -> R.string.role_owner
+    app.site.core.model.OrgRole.ADMIN -> R.string.role_admin
+    app.site.core.model.OrgRole.MEMBER -> R.string.role_member
 }

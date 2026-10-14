@@ -36,7 +36,7 @@ sealed class AppError(message: String) : Exception(message) {
     /** The only owner can't leave while other people are in the organisation. */
     data object OwnerMustTransfer : AppError("owner must transfer")
 
-    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE }
+    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE, ALREADY_MEMBER }
 }
 
 interface SessionRepository {
@@ -151,4 +151,16 @@ interface GalleryRepository {
     suspend fun createAlbum(projectId: String, name: String): Result<app.site.core.model.Album>
     /** Moves photos into an album, or out of every album with null. */
     suspend fun moveToAlbum(photoIds: List<String>, albumId: String?): Result<Unit>
+}
+
+/** Who works on a site, with what role, and who's been invited. */
+interface TeamRepository {
+    fun team(projectId: String): Flow<app.site.core.model.Team>
+    /**
+     * Invites a phone number to this site with a role; they get an SMS and join when they sign in.
+     * Needs a connection (the server sends the SMS). Returns whether the SMS went out.
+     */
+    suspend fun invite(projectId: String, phone: String, role: app.site.core.model.ProjectRole): Result<Boolean>
+    suspend fun setRole(projectId: String, userId: String, role: app.site.core.model.ProjectRole): Result<Unit>
+    suspend fun remove(projectId: String, userId: String): Result<Unit>
 }

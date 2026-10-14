@@ -59,3 +59,33 @@ class GalleryTest {
         assertTrue(b.photos(p.id).first().isEmpty())
     }
 }
+
+class TeamTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun demoTeamAndInvites() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
+        b.completeProfile("Anita Rao", null).getOrThrow()
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val team = b.team(tower.id).first()
+        assertTrue(team.canManage)
+        assertEquals(listOf("Anita Rao", "Ravi Singh", "Meena Iyer"), team.members.map { it.name })
+        assertEquals(app.site.core.model.ProjectRole.ENGINEER, team.members[1].role)
+
+        assertEquals(AppError.Reason.ALREADY_MEMBER,
+            (b.invite(tower.id, "+919800000001", app.site.core.model.ProjectRole.VIEWER).exceptionOrNull() as AppError.Invalid).reason)
+        assertEquals(AppError.Reason.BAD_PHONE,
+            (b.invite(tower.id, "12345", app.site.core.model.ProjectRole.VIEWER).exceptionOrNull() as AppError.Invalid).reason)
+        b.invite(tower.id, "98111 22222", app.site.core.model.ProjectRole.STOREKEEPER).getOrThrow()
+        assertEquals("+919811122222", b.team(tower.id).first().invites.single().phone)
+
+        val ravi = team.members[1].userId
+        b.setRole(tower.id, ravi, app.site.core.model.ProjectRole.MANAGER).getOrThrow()
+        assertEquals(app.site.core.model.ProjectRole.MANAGER, b.team(tower.id).first().members.first { it.userId == ravi }.role)
+        b.remove(tower.id, ravi).getOrThrow()
+        assertTrue(b.team(tower.id).first().members.none { it.userId == ravi })
+        // the owner's own row comes from the company and can't be edited per site
+        assertIs<AppError.NotAllowed>(b.setRole(tower.id, team.members[0].userId, app.site.core.model.ProjectRole.VIEWER).exceptionOrNull())
+    }
+}

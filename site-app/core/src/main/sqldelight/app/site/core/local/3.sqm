@@ -1,0 +1,28 @@
+-- Version 3 -> 4: people and roles (S36).
+
+-- People and roles. Owners and admins of the company manage every site.
+CREATE TABLE org_member (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL
+);
+
+CREATE TABLE project_member (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role TEXT NOT NULL
+);
+CREATE INDEX project_member_project ON project_member(project_id);
+
+CREATE TABLE invite (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  project_id TEXT,
+  phone TEXT NOT NULL,
+  project_role TEXT,
+  accepted_at TEXT,
+  created_at TEXT NOT NULL
+);
+

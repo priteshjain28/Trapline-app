@@ -136,6 +136,10 @@ internal object Seed {
             grns = grns.associateBy { it.id },
             issues = issues.associateBy { it.id },
             adjustments = mapOf(opening.id to opening),
+            projectMembers = mapOf(
+                tower.id to mapOf(ravi.id to app.site.core.model.ProjectRole.ENGINEER, meena.id to app.site.core.model.ProjectRole.SUPERVISOR),
+                villas.id to mapOf(meena.id to app.site.core.model.ProjectRole.MANAGER),
+            ),
         )
     }
 }

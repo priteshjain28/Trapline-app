@@ -75,6 +75,13 @@ import app.site.core.local.Task_update as UpdateRow
 import app.site.core.local.Worker as WorkerRow
 import app.site.core.local.Grn as GrnRow
 import app.site.core.local.Album as AlbumRow
+import app.site.core.local.Invite as InviteRow
+import app.site.core.local.Org_member as OrgMemberRow
+import app.site.core.local.Project_member as ProjectMemberRow
+import app.site.core.model.Member
+import app.site.core.model.PendingInvite
+import app.site.core.model.ProjectRole
+import app.site.core.model.Team
 import app.site.core.model.Album
 import app.site.core.model.Photo
 import app.site.core.local.Grn_line as GrnLineRow
@@ -113,7 +120,7 @@ class SyncedBackend(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository {
 
     private val q = db.siteQueries
 
@@ -126,7 +133,7 @@ class SyncedBackend(
             "reports" to q::deleteReport, "activity_events" to q::deleteActivity,
             "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine,
             "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
-            "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
+            "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum, "project_members" to q::deleteProjectMember,
         ),
         restore = ::restore,
     )
@@ -690,6 +697,78 @@ class SyncedBackend(
         syncNow()
     }
 
+    // ================================================================ team
+
+    private fun role(s: String?): ProjectRole? = ProjectRole.entries.firstOrNull { it.name.equals(s, true) }
+    private fun orgRole(s: String?): OrgRole? = OrgRole.entries.firstOrNull { it.name.equals(s, true) }
+
+    override fun team(projectId: String): Flow<Team> {
+        val orgId = q.project(projectId).executeAsOneOrNull()?.org_id ?: _session.value?.org?.id.orEmpty()
+        return combine(
+            q.people().asFlow().mapToList(io),
+            q.orgMembers(orgId).asFlow().mapToList(io),
+            q.projectMembers(projectId).asFlow().mapToList(io),
+            q.pendingInvites(projectId).asFlow().mapToList(io),
+            _session,
+        ) { people, orgMembers, siteMembers, invites, session ->
+            val byId = people.associateBy { it.id }
+            val company = orgMembers.mapNotNull { m ->
+                val r = orgRole(m.role)
+                if (r != OrgRole.OWNER && r != OrgRole.ADMIN) return@mapNotNull null
+                val p = byId[m.user_id]
+                Member(m.user_id, p?.name.orEmpty(), p?.phone.orEmpty(), ProjectRole.MANAGER, r)
+            }.sortedBy { it.orgRole }
+            val site = siteMembers.filter { m -> company.none { it.userId == m.user_id } }.map { m ->
+                val p = byId[m.user_id]
+                Member(m.user_id, p?.name.orEmpty(), p?.phone.orEmpty(), role(m.role) ?: ProjectRole.VIEWER)
+            }.sortedWith(compareBy({ it.role.ordinal }, { it.name.lowercase() }))
+            val me = session?.user?.id
+            val canManage = session?.orgRole == OrgRole.OWNER || session?.orgRole == OrgRole.ADMIN ||
+                siteMembers.any { it.user_id == me && role(it.role) == ProjectRole.MANAGER }
+            Team(company + site, invites.map { PendingInvite(it.id, it.phone, role(it.project_role), SyncEngine.parseInstant(it.created_at)) }, canManage)
+        }
+    }
+
+    override suspend fun invite(projectId: String, phone: String, role: ProjectRole): Result<Boolean> = call {
+        val p = Validate.phone(phone).getOrThrow()
+        val project = q.project(projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val member = q.people().executeAsList().firstOrNull { it.phone == p }
+        if (member != null && (q.projectMemberOne(projectId, member.id).executeAsOneOrNull() != null ||
+                q.orgMembers(project.org_id).executeAsList().any { it.user_id == member.id && orgRole(it.role) in setOf(OrgRole.OWNER, OrgRole.ADMIN) })) {
+            throw AppError.Invalid("phone", AppError.Reason.ALREADY_MEMBER)
+        }
+        // the server checks who may invite, sends the SMS and rate-limits; it needs a connection
+        val res = try {
+            api.function("invite", buildJsonObject {
+                put("phone", p); put("org_id", project.org_id); put("project_id", projectId)
+                put("org_role", "member"); put("project_role", role.name.lowercase())
+            }).jsonObject
+        } catch (e: RemoteError.Rejected) {
+            throw if (e.code == "bad_phone") AppError.Invalid("phone", AppError.Reason.BAD_PHONE) else e
+        }
+        res.strOrNull("invite_id")?.let { id -> q.upsertInvite(InviteRow(id, project.org_id, projectId, p, role.name.lowercase(), null, now())) }
+        syncNow()
+        res.bool("sms_sent", false)
+    }
+
+    override suspend fun setRole(projectId: String, userId: String, role: ProjectRole): Result<Unit> = call {
+        val row = q.projectMemberOne(projectId, userId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        db.transaction {
+            q.setProjectMemberRole(role.name.lowercase(), row.id)
+            engine.enqueueUpdate("project_members", row.id, mapOf("id" to "eq.${row.id}"), buildJsonObject { put("role", role.name.lowercase()) })
+        }
+        syncNow()
+    }
+
+    override suspend fun remove(projectId: String, userId: String): Result<Unit> = call {
+        val row = q.projectMemberOne(projectId, userId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        db.transaction {
+            q.deleteProjectMember(row.id)
+            engine.enqueueDelete("project_members", row.id, mapOf("id" to "eq.${row.id}"))
+        }
+        syncNow()
+    }
+
     // ================================================================ feed
 
     override fun feed(projectId: String): Flow<List<ActivityEvent>> =
@@ -729,6 +808,16 @@ class SyncedBackend(
             val old = q.mediaOne(o.str("id")).executeAsOneOrNull()
             q.upsertMedia(MediaRow(o.str("id"), o.str("project_id"), o.strOrNull("task_update_id"), old?.local_uri,
                 o.strOrNull("storage_path"), o.str("taken_at"), o.strOrNull("album_id"), o.strOrNull("uploaded_by")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("org_members", "id,org_id,user_id,role,updated_at", { o ->
+            q.upsertOrgMember(OrgMemberRow(o.str("id"), o.str("org_id"), o.str("user_id"), o.str("role")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("project_members", "id,project_id,user_id,role,updated_at", { o ->
+            q.upsertProjectMember(ProjectMemberRow(o.str("id"), o.str("project_id"), o.str("user_id"), o.str("role")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("invites", "id,org_id,project_id,phone,project_role,accepted_at,created_at,updated_at", { o ->
+            q.upsertInvite(InviteRow(o.str("id"), o.str("org_id"), o.strOrNull("project_id"), o.str("phone"), o.strOrNull("project_role"),
+                o.strOrNull("accepted_at"), o.str("created_at")))
         }, { it.str("id") }),
         SyncEngine.PullSpec("albums", "id,project_id,name,updated_at", { o ->
             q.upsertAlbum(AlbumRow(o.str("id"), o.str("project_id"), o.str("name")))
@@ -800,6 +889,7 @@ class SyncedBackend(
         "workers" to q::deleteWorker, "reports" to q::deleteReport,
         "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine, "material_issues" to q::deleteIssue,
         "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
+        "project_members" to q::deleteProjectMember, "org_members" to q::deleteOrgMember, "invites" to q::deleteInvite,
     )
 
     // ================================================================ errors

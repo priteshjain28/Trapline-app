@@ -66,7 +66,7 @@ class FakeBackend(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -95,6 +95,12 @@ class FakeBackend(
         val albums: Map<String, app.site.core.model.Album> = emptyMap(),
         /** Album of a work-update photo, by its gallery id. */
         val photoAlbums: Map<String, String> = emptyMap(),
+        /** projectId -> userId -> role */
+        val projectMembers: Map<String, Map<String, app.site.core.model.ProjectRole>> = emptyMap(),
+        /** Company roles other than plain member; the signed-in demo user is the owner. */
+        val orgRoles: Map<String, OrgRole> = emptyMap(),
+        /** projectId -> pending invites */
+        val invites: Map<String, List<app.site.core.model.PendingInvite>> = emptyMap(),
     )
 
     /** A stock_adjustments row: [qty] is signed, like the server's. */
@@ -506,6 +512,66 @@ class FakeBackend(
             }
             s.copy(photos = photos, photoAlbums = links)
         }
+        return Result.success(Unit)
+    }
+
+    // ------------------------------------------------------------------ team
+
+    private fun orgRoleOf(s: State, userId: String?): OrgRole? =
+        if (userId != null && userId == _session.value?.user?.id) _session.value?.orgRole else s.orgRoles[userId]
+
+    private fun canManage(s: State, projectId: String): Boolean {
+        val me = _session.value?.user?.id ?: return false
+        val org = orgRoleOf(s, me)
+        return org == OrgRole.OWNER || org == OrgRole.ADMIN || s.projectMembers[projectId]?.get(me) == app.site.core.model.ProjectRole.MANAGER
+    }
+
+    override fun team(projectId: String): Flow<app.site.core.model.Team> = combine(state, _session) { s, session ->
+        val users = s.users + listOfNotNull(session?.user).associateBy { it.id }
+        val company = users.values.mapNotNull { u ->
+            val r = orgRoleOf(s, u.id)
+            if (r == OrgRole.OWNER || r == OrgRole.ADMIN) app.site.core.model.Member(u.id, u.name, u.phone, app.site.core.model.ProjectRole.MANAGER, r) else null
+        }
+        val site = s.projectMembers[projectId].orEmpty().mapNotNull { (uid, role) ->
+            users[uid]?.takeIf { u -> company.none { it.userId == u.id } }?.let { u -> app.site.core.model.Member(u.id, u.name, u.phone, role) }
+        }
+        app.site.core.model.Team(
+            (company.sortedBy { it.orgRole } + site.sortedWith(compareBy({ it.role.ordinal }, { it.name.lowercase() }))),
+            s.invites[projectId].orEmpty().sortedByDescending { it.createdAt },
+            canManage(s, projectId),
+        )
+    }
+
+    override suspend fun invite(projectId: String, phone: String, role: app.site.core.model.ProjectRole): Result<Boolean> {
+        io()
+        val p = Validate.phone(phone).getOrElse { return Result.failure(it) }
+        val s = state.value
+        if (s.projects[projectId] == null || !canManage(s, projectId)) return Result.failure(AppError.NotAllowed)
+        val existing = (s.users.values + listOfNotNull(_session.value?.user)).firstOrNull { it.phone == p }
+        if (existing != null && (s.projectMembers[projectId]?.containsKey(existing.id) == true ||
+                orgRoleOf(s, existing.id).let { it == OrgRole.OWNER || it == OrgRole.ADMIN })) {
+            return Result.failure(AppError.Invalid("phone", AppError.Reason.ALREADY_MEMBER))
+        }
+        if (s.invites[projectId].orEmpty().any { it.phone == p }) return Result.success(false)
+        val inv = app.site.core.model.PendingInvite(newId(), p, role, clock.instant())
+        state.update { it.copy(invites = it.invites + (projectId to (it.invites[projectId].orEmpty() + inv))) }
+        // the demo sends no SMS
+        return Result.success(false)
+    }
+
+    override suspend fun setRole(projectId: String, userId: String, role: app.site.core.model.ProjectRole): Result<Unit> {
+        io()
+        val s = state.value
+        if (!canManage(s, projectId) || s.projectMembers[projectId]?.containsKey(userId) != true) return Result.failure(AppError.NotAllowed)
+        state.update { it.copy(projectMembers = it.projectMembers + (projectId to (it.projectMembers[projectId].orEmpty() + (userId to role)))) }
+        return Result.success(Unit)
+    }
+
+    override suspend fun remove(projectId: String, userId: String): Result<Unit> {
+        io()
+        val s = state.value
+        if (!canManage(s, projectId) || s.projectMembers[projectId]?.containsKey(userId) != true) return Result.failure(AppError.NotAllowed)
+        state.update { it.copy(projectMembers = it.projectMembers + (projectId to (it.projectMembers[projectId].orEmpty() - userId))) }
         return Result.success(Unit)
     }
 

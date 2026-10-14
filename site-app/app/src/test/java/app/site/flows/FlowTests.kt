@@ -497,3 +497,60 @@ class GalleryFlows : FlowTest() {
         waitFor("1 photo")
     }
 }
+
+/** F10: people on a site. Seed: Anita owns the company; Ravi is site engineer, Meena supervisor on the tower. */
+class TeamFlows : FlowTest() {
+    private fun openTeam() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Team"))
+        waitFor("People on this site")
+    }
+
+    @Test fun t_H1_teamShowsRoles() {
+        openTeam()
+        assertTrue(shows("Owner"))
+        assertTrue(shows("Site engineer"))
+        assertTrue(shows("Supervisor"))
+        assertAccessible("S36 team")
+    }
+
+    @Test fun t_H2_inviteByPhone() {
+        openTeam()
+        tap(button("Invite"))
+        type("Their mobile number", "98111 22222")
+        tap(text("Storekeeper"))
+        assertAccessible("S36 invite")
+        tap(button("Send invite"))
+        waitFor("Invite saved. They join when they sign in with this number.")
+        assertTrue(shows("+919811122222"))
+    }
+
+    @Test fun t_N1_cantInviteSomeoneAlreadyHere() {
+        openTeam()
+        tap(button("Invite"))
+        type("Their mobile number", "98000 00001")
+        tap(button("Send invite"))
+        waitFor("They're already on this site")
+    }
+
+    @Test fun t_H3_changeRoleAndRemove() {
+        openTeam()
+        tap(text("Ravi Singh"))
+        waitFor("Change role")
+        tap(text("Manager"))
+        compose.waitForIdle()
+        waitFor("Manager")
+        tap(text("Ravi Singh"))
+        tap(button("Remove from this site"))
+        compose.waitUntil(5_000) { !shows("Ravi Singh") }
+    }
+
+    @Test fun profileShowsTheRealRole() {
+        launch()
+        tap(action("Your profile"))
+        waitFor("Profile")
+        assertTrue(shows("Owner"))
+    }
+}
