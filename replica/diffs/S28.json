@@ -1,0 +1,66 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 17.6,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 560,
+   "w": 1344,
+   "h": 784,
+   "cells": 57,
+   "where": "top centre"
+  },
+  {
+   "x": 0,
+   "y": 1456,
+   "w": 1344,
+   "h": 560,
+   "cells": 33,
+   "where": "middle centre"
+  },
+  {
+   "x": 1232,
+   "y": 0,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top right"
+  },
+  {
+   "x": 224,
+   "y": 112,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 672,
+   "y": 336,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top centre"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S28-profile.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S28.png"
+ },
+ "screen": "S28",
+ "state_note": ""
+}

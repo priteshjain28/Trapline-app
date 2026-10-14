@@ -1,0 +1,66 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 35.9,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 336,
+   "y": 2464,
+   "w": 672,
+   "h": 224,
+   "cells": 12,
+   "where": "bottom centre"
+  },
+  {
+   "x": 224,
+   "y": 0,
+   "w": 560,
+   "h": 336,
+   "cells": 11,
+   "where": "top centre"
+  },
+  {
+   "x": 560,
+   "y": 448,
+   "w": 560,
+   "h": 112,
+   "cells": 5,
+   "where": "top centre"
+  },
+  {
+   "x": 0,
+   "y": 336,
+   "w": 336,
+   "h": 112,
+   "cells": 3,
+   "where": "top left"
+  },
+  {
+   "x": 1232,
+   "y": 448,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top right"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S24-attendance-settings.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S24.png"
+ },
+ "screen": "S24",
+ "state_note": "reference has a toast at the bottom"
+}

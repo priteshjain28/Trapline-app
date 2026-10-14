@@ -1,0 +1,50 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 14.1,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 560,
+   "w": 1344,
+   "h": 1344,
+   "cells": 73,
+   "where": "middle centre"
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "w": 560,
+   "h": 336,
+   "cells": 8,
+   "where": "top left"
+  },
+  {
+   "x": 672,
+   "y": 224,
+   "w": 560,
+   "h": 112,
+   "cells": 5,
+   "where": "top right"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S07-reports-list-empty.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S07.png"
+ },
+ "screen": "S07",
+ "state_note": ""
+}

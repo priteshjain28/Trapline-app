@@ -1,0 +1,242 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 50.9,
+ "verdict": "partly",
+ "regions": [
+  {
+   "x": 112,
+   "y": 1680,
+   "w": 672,
+   "h": 224,
+   "cells": 8,
+   "where": "middle left"
+  },
+  {
+   "x": 336,
+   "y": 0,
+   "w": 336,
+   "h": 224,
+   "cells": 5,
+   "where": "top centre"
+  },
+  {
+   "x": 112,
+   "y": 224,
+   "w": 224,
+   "h": 224,
+   "cells": 4,
+   "where": "top left"
+  },
+  {
+   "x": 1120,
+   "y": 0,
+   "w": 224,
+   "h": 224,
+   "cells": 3,
+   "where": "top right"
+  },
+  {
+   "x": 0,
+   "y": 672,
+   "w": 224,
+   "h": 224,
+   "cells": 3,
+   "where": "top left"
+  },
+  {
+   "x": 1007,
+   "y": 784,
+   "w": 224,
+   "h": 112,
+   "cells": 2,
+   "where": "top right"
+  },
+  {
+   "x": 560,
+   "y": 1007,
+   "w": 224,
+   "h": 112,
+   "cells": 2,
+   "where": "middle centre"
+  },
+  {
+   "x": 112,
+   "y": 1568,
+   "w": 224,
+   "h": 112,
+   "cells": 2,
+   "where": "middle left"
+  },
+  {
+   "x": 112,
+   "y": 0,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 0,
+   "y": 112,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 448,
+   "y": 784,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top centre"
+  },
+  {
+   "x": 784,
+   "y": 784,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top centre"
+  },
+  {
+   "x": 112,
+   "y": 1120,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle left"
+  },
+  {
+   "x": 448,
+   "y": 1120,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle centre"
+  },
+  {
+   "x": 112,
+   "y": 1344,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle left"
+  },
+  {
+   "x": 448,
+   "y": 1344,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle centre"
+  },
+  {
+   "x": 448,
+   "y": 1568,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle centre"
+  },
+  {
+   "x": 784,
+   "y": 1568,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle centre"
+  },
+  {
+   "x": 896,
+   "y": 1680,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "middle right"
+  },
+  {
+   "x": 784,
+   "y": 1792,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom centre"
+  },
+  {
+   "x": 112,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 336,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 896,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  },
+  {
+   "x": 1120,
+   "y": 2464,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  },
+  {
+   "x": 0,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom left"
+  },
+  {
+   "x": 1007,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  },
+  {
+   "x": 1232,
+   "y": 2576,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "bottom right"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S25-more-menu.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S25.png"
+ },
+ "screen": "S25",
+ "state_note": ""
+}

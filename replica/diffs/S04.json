@@ -1,0 +1,74 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 16.6,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 0,
+   "w": 1344,
+   "h": 1344,
+   "cells": 83,
+   "where": "top centre"
+  },
+  {
+   "x": 112,
+   "y": 1456,
+   "w": 672,
+   "h": 336,
+   "cells": 13,
+   "where": "middle left"
+  },
+  {
+   "x": 784,
+   "y": 2464,
+   "w": 560,
+   "h": 224,
+   "cells": 10,
+   "where": "bottom right"
+  },
+  {
+   "x": 896,
+   "y": 1680,
+   "w": 448,
+   "h": 112,
+   "cells": 4,
+   "where": "middle right"
+  },
+  {
+   "x": 1007,
+   "y": 1456,
+   "w": 224,
+   "h": 112,
+   "cells": 2,
+   "where": "middle right"
+  },
+  {
+   "x": 448,
+   "y": 0,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top centre"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S04-projects-list.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S04.png"
+ },
+ "screen": "S04",
+ "state_note": ""
+}

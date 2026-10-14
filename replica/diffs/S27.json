@@ -1,0 +1,74 @@
+{
+ "mode": "layout",
+ "original": {
+  "width": 1344,
+  "height": 2710
+ },
+ "clone": {
+  "width": 1344,
+  "height": 2709
+ },
+ "compared_at": {
+  "width": 480,
+  "height": 968
+ },
+ "height_delta_pct": 0.0,
+ "score": 18.1,
+ "verdict": "different",
+ "regions": [
+  {
+   "x": 0,
+   "y": 1007,
+   "w": 1344,
+   "h": 1120,
+   "cells": 66,
+   "where": "middle centre"
+  },
+  {
+   "x": 0,
+   "y": 224,
+   "w": 1344,
+   "h": 672,
+   "cells": 42,
+   "where": "top centre"
+  },
+  {
+   "x": 0,
+   "y": 2240,
+   "w": 896,
+   "h": 448,
+   "cells": 19,
+   "where": "bottom left"
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "w": 448,
+   "h": 560,
+   "cells": 10,
+   "where": "top left"
+  },
+  {
+   "x": 336,
+   "y": 336,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  },
+  {
+   "x": 0,
+   "y": 896,
+   "w": 112,
+   "h": 112,
+   "cells": 1,
+   "where": "top left"
+  }
+ ],
+ "files": {
+  "original": "/tmp/tmpx44jyaek/S27-feed.png",
+  "clone": "/home/user/Trapline-app/replica/clone-screens/S27.png"
+ },
+ "screen": "S27",
+ "state_note": "different data: reference has 1 post, clone has the seed feed"
+}
