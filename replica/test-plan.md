@@ -18,6 +18,12 @@ and fails on any exception. Never tested: the original app's servers.
 
 ## Results (2026-10-14)
 
+**Second round** (screens built since: material, photos, team, company, issues, money, camera): 36 cases, 32
+covered by UI tests, the rest by core and db tests. First run (Site app run 25, 2d140a1): 89 app tests, 2 failed, both
+real bugs: BUG-009 (S2) and BUG-010 (S3). Both fixed with the failing test kept.
+
+**First round:**
+
 50 cases, 50 run: 49 pass, 1 partly (F02-H1: the PDF step is skipped under Robolectric and moved to the manual
 checklist). 7 bugs found, 7 fixed: 1 S2, 6 S3. Automated: 46 UI tests (Site app CI, green at 58ad75d),
 31 core tests, the database tests and 9 Deno tests (Backend CI). The manual checklist below is still open: it needs a
@@ -117,8 +123,8 @@ recon numbering: they are recon F05 and part of F01.
 | M-H4 | happy | Issued → Issue material → task #2, cement 35 | issue #3 for #2; cement 135 → 100 | ui `m_H4` | pass |
 | M-E1 | edge: issue more than in stock | 500 bags | "more than the site holds", disabled | ui `m_E1`, core `Stock` | pass |
 | M-E2 | edge: physical count | Update → Counted 130 | 130 on site; history "Count corrected −5" | ui `m_E2` | pass |
-| M-E3 | edge: add something already on site | Add material → pick Cement · OPC 53 → 140 | 140 on site (a count), not 275 | ui `m_E3` | **failed → BUG-009** |
-| M-E4 | edge: Hindi and emoji | "सरिया 8mm ✅", kg, 40 | listed as typed | ui `m_E4` | see results |
+| M-E3 | edge: add something already on site | Add material → pick Cement · OPC 53 → 140 | 140 on site (a count), not 275 | ui `m_E3` | failed (BUG-009); pass after fix |
+| M-E4 | edge: Hindi and emoji | "सरिया 8mm ✅", kg, 40 | listed as typed | ui `m_E4` | pass |
 | M-E5 | edge: offline, two phones | add material and deliveries offline on two phones | same material id, stock adds up | core `materialMovesAcrossPhones` | pass |
 | M-E6 | edge: delivery dated tomorrow | receive with a future date | refused (IN_FUTURE) | core `MaterialTest.refusals` | pass |
 | M-N1 | negative: empty delivery | no material, then qty 0 | Save disabled, "above zero" | ui `m_N1` | pass |
@@ -131,8 +137,8 @@ recon numbering: they are recon F05 and part of F01.
 | P-H2 | happy | More → Expenses → Add spend ₹750 → pay crane | total ₹19,250 → ₹20,000; crane paid | ui `p_H2` | pass |
 | P-E1 | edge: record twice | Record as payable again | nothing doubles; button off | ui `p_H1`, core | pass |
 | P-N1 | negative: overpay | ₹9,000 on ₹8,000 due | "more than what's still due" | ui `p_N1`, core | pass |
-| P-N2 | negative: permission | plain member opens Wages, Report | money hidden; no Wages or Payments part in the report | ui `p_N2` | **failed → BUG-010** |
-| P-N3 | negative: zero spend | amount 0 | Save disabled | ui `p_N3` | see results |
+| P-N2 | negative: permission | plain member opens Wages, Report | money hidden; no Wages or Payments part in the report | ui `p_N2` | failed (BUG-010); pass after fix |
+| P-N3 | negative: zero spend | amount 0 | Save disabled | ui `p_N3` | pass |
 | P-N4 | negative: second user's money | outsider / supervisor reads payables | nothing (RLS `can_see_money`) | db `smoke` ("B cannot see money"), core `moneyIsHiddenFromSiteStaff` | pass |
 
 ### F07 Issues
@@ -141,8 +147,8 @@ recon numbering: they are recon F05 and part of F01.
 | --- | --- | --- | --- | --- | --- |
 | I-H1 | happy | More → Issues; Closed; All | counts and lists per status | ui `i_H1` | pass |
 | I-H2 | happy | Raise issue on task #2 for Ravi → comment → Mark fixed | issue #3, comment shown, Reopen offered | ui `i_H2` | pass |
-| I-E1 | edge: reopen | Closed → #2 → Reopen → back | Open (2) | ui `i_E1` | see results |
-| I-E2 | edge: Hindi + emoji comment, empty comment | | Send off when empty; text shown as typed | ui `i_E2` | see results |
+| I-E1 | edge: reopen | Closed → #2 → Reopen → back | Open (2) | ui `i_E1` | pass |
+| I-E2 | edge: Hindi + emoji comment, empty comment | | Send off when empty; text shown as typed | ui `i_E2` | pass |
 | I-E3 | edge: offline raise | raise and comment with no network, then sync | saved on the phone; numbered by the server | core `issuesAndCommentsSync` | pass |
 | I-N1 | negative: no title | | Raise disabled | ui `i_N1` | pass |
 
@@ -152,7 +158,7 @@ recon numbering: they are recon F05 and part of F01.
 | --- | --- | --- | --- | --- | --- |
 | G-H1 | happy | More → Photos → Albums → New album | album opens, empty | ui `g_H1` | pass |
 | G-H2 | happy | photo → viewer → Move to album | album shows 1 photo | ui `g_H2` | pass |
-| G-N1 | negative: blank album name | spaces only | Create disabled | ui `g_N1` | see results |
+| G-N1 | negative: blank album name | spaces only | Create disabled | ui `g_N1` | pass |
 | CAM-N1 | negative: no camera permission | Take photo | asks, offers phone camera app, closes | ui `cam_N1` | pass |
 
 ### F10 Team and company
@@ -163,8 +169,8 @@ recon numbering: they are recon F05 and part of F01.
 | T-H2 | happy | Invite 98111 22222 as storekeeper | pending invite listed | ui `t_H2` | pass |
 | T-H3 | happy | Ravi → Manager → Remove | role changes; removed | ui `t_H3` | pass |
 | T-N1 | negative: already a member | invite Ravi's number | "already on this site" | ui `t_N1` | pass |
-| T-N2 | negative: not a mobile number | 12345 67890 | phone error | ui `t_N2` | see results |
-| T-N3 | negative: permission | plain member opens Team | explained; no Invite | ui `t_N3` | see results |
+| T-N2 | negative: not a mobile number | 12345 67890 | phone error | ui `t_N2` | pass |
+| T-N3 | negative: permission | plain member opens Team | explained; no Invite | ui `t_N3` | pass |
 | C-H1 | happy + negative | email "anita at example", then a good one | refused, then saved lower-case | ui `c_H1` | pass |
 | C-H2 | happy | rename the company | saved | ui `c_H2` | pass |
 

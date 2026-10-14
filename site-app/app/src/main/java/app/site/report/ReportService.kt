@@ -42,8 +42,11 @@ class ReportService(
     private suspend fun render(r: Report) {
         try {
             val project = projects.project(r.projectId).first() ?: error("project gone")
+            // money only for people who may see it, whatever the report asked for
+            val seesMoney = money.canSeeMoney(r.projectId).first()
+            val parts = if (seesMoney) r.parts else r.parts.copy(wages = false, payments = false)
             val content = ReportBuilder.build(
-                project, r.type, r.from, r.to, r.parts,
+                project, r.type, r.from, r.to, parts,
                 tasks.tasks(r.projectId).first(),
                 tasks.updatesInRange(r.projectId, r.from, r.to).first(),
                 attendance.workers(r.projectId).first(),
@@ -52,8 +55,7 @@ class ReportService(
                 if (r.parts.material) materials.stock(r.projectId).first().map { it to materials.history(r.projectId, it.material.id).first() }
                 else emptyList(),
                 if (r.parts.issues) issues.siteIssues(r.projectId).first() else emptyList(),
-                // money only for people who may see it, whatever the report asked for
-                if (r.parts.payments && money.canSeeMoney(r.projectId).first()) {
+                if (parts.payments) {
                     val names = attendance.workers(r.projectId).first().associate { it.id to it.name }
                     money.payables(r.projectId).first().map { p ->
                         Triple(p, money.payments(p.id).first(), p.title ?: names[p.workerId].orEmpty())

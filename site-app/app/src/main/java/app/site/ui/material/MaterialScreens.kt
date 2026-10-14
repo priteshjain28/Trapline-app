@@ -96,6 +96,7 @@ fun AddMaterialScreen(projectId: String, onBack: () -> Unit, onDone: () -> Unit)
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     val catalogue by remember { container.materials.catalogue() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val stock by remember(projectId) { container.materials.stock(projectId) }.collectAsStateWithLifecycle(initialValue = emptyList())
     var name by rememberSaveable { mutableStateOf("") }
     var spec by rememberSaveable { mutableStateOf("") }
     var unit by rememberSaveable { mutableStateOf("") }
@@ -104,6 +105,8 @@ fun AddMaterialScreen(projectId: String, onBack: () -> Unit, onDone: () -> Unit)
     var error by remember { mutableStateOf<Throwable?>(null) }
     val q = Format.parseQty(qty)
     val qtyBad = qty.isNotBlank() && (q == null || q <= 0)
+    // the same material already on this site: what's typed is a count, not more stock on top
+    val onSite = stock.firstOrNull { it.material.id == Material.idFor(it.material.orgId, name, spec, unit) }
 
     Scaffold(
         topBar = { AppBarSub(stringResource(R.string.mat_add_title), onBack) },
@@ -113,7 +116,8 @@ fun AddMaterialScreen(projectId: String, onBack: () -> Unit, onDone: () -> Unit)
                     busy = true
                     scope.launch {
                         val r = container.materials.addMaterial(NewMaterial(name, spec, unit)).mapCatching { m ->
-                            container.materials.adjust(NewAdjustment(projectId, m.id, AdjustmentKind.OPENING, q ?: 0.0, container.today())).getOrThrow()
+                            val kind = if (stock.any { it.material.id == m.id }) AdjustmentKind.COUNTED else AdjustmentKind.OPENING
+                            container.materials.adjust(NewAdjustment(projectId, m.id, kind, q ?: 0.0, container.today())).getOrThrow()
                         }
                         r.onSuccess { onDone() }.onFailure { error = it }
                         busy = false
@@ -142,6 +146,9 @@ fun AddMaterialScreen(projectId: String, onBack: () -> Unit, onDone: () -> Unit)
             SiteTextField(spec, { spec = it }, stringResource(R.string.field_spec),
                 placeholder = stringResource(R.string.field_spec_placeholder), error = fieldError(error, "spec"))
             UnitField(unit, { unit = it }, fieldError(error, "uom"))
+            if (onSite != null) {
+                InfoBanner(stringResource(R.string.mat_add_already_here, Format.qty(onSite.inStock), onSite.material.uom))
+            }
             SiteTextField(qty, { qty = it; error = null }, stringResource(R.string.field_qty_on_site), required = true,
                 keyboardType = KeyboardType.Decimal, suffix = unit.ifBlank { null },
                 error = if (qtyBad) stringResource(R.string.err_not_positive) else fieldError(error, "qty"))

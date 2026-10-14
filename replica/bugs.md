@@ -6,8 +6,8 @@ data layer, fixed clock Tue 13 Oct 2026 09:30 IST. Only reproduced bugs are list
 | | open | fixed |
 | --- | --- | --- |
 | S1 | 0 | 0 |
-| S2 | 0 | 1 |
-| S3 | 0 | 6 |
+| S2 | 0 | 2 |
+| S3 | 0 | 7 |
 | S4 | 0 | 0 |
 
 ### BUG-001: demo lets a free company add a 4th active site; the server refuses it
@@ -155,3 +155,39 @@ Status: fixed in cf80635 (INTERNET and ACCESS_NETWORK_STATE declared). Confirm o
   wrong day near midnight.
 - The report PDF can't be made under Robolectric (no native PdfDocument), so `f02_H1` skips that step. Make a report on
   a real phone (manual checklist). Report failures are now logged (d92e614) instead of swallowed.
+
+### BUG-009: adding a material that's already on site adds to its stock instead of setting it
+
+- Severity: S2 (stock figures silently wrong; issuing is then checked against the wrong number)
+- Flow / case: F03 / M-E3
+- Screen: S15 Add material
+- Build: 2d140a1  Device: Robolectric phone
+
+Steps
+1. Green Park Tower B → Material (cement: 135 bag on site)
+2. Add material → type "Cem" → pick "Cement · OPC 53 (bag)" → How much is on site now: 140 → Add material
+
+Expected: 140 bag on site (the field asks how much is on site now)
+Actual: 275 bag on site; the history shows a second "Opening stock +140"
+Evidence: `MaterialFlows.m_E3_addingWhatsAlreadyOnSiteSetsTheCount` failed in Site app run 25 (timed out waiting for "140 bag on site")
+Suspected cause: the screen always recorded an opening entry, even when the catalogue returned a material this site already holds
+Status: fixed in FIXCOMMIT (a material already on site is recorded as a count, which corrects the stock to the number entered; the form says so before saving)
+
+### BUG-010: a plain member can put wages in a report although the Wages tab hides them
+
+- Severity: S3 (pay visible to people the app otherwise hides it from; the server itself lets members read worker rates, so not a breach of the access rules)
+- Flow / case: F05 / P-N2
+- Screen: S06 report builder
+- Build: 2d140a1  Device: Robolectric phone
+
+Steps
+1. Sign in as a company member who isn't the site manager or accountant
+2. Attendance → Wages: "Wages and spend are visible to the site manager and accountants."
+3. Report tab
+
+Expected: no Wages part (as there is no Payments part)
+Actual: Wages is offered; ticked, the PDF lists each worker's wages
+Evidence: `MoneyFlows.p_N2_memberSeesNoMoney` failed in Site app run 25 ("no wages part")
+Suspected cause: only the Payments part checked `canSeeMoney`
+Status: fixed in FIXCOMMIT (Wages part shown only to people who see money; the report service also drops wages and payments for anyone else)
+

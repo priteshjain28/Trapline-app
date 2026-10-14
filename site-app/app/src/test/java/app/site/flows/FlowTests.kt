@@ -480,6 +480,7 @@ class MaterialFlows : FlowTest() {
         tap(button("Add material"))
         type("Material", "Cem")
         tap(text("Cement · OPC 53 (bag)"))
+        waitFor("This site already has 135 bag of it", substring = true)
         type("How much is on site now", "140")
         tap(button("Add material"))
         waitFor("140 bag on site")

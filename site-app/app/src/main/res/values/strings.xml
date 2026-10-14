@@ -329,6 +329,7 @@
     <string name="mat_for_task">For %1$s</string>
     <string name="mat_lines_more">+%1$d more</string>
     <string name="mat_add_title">Add material on site</string>
+    <string name="mat_add_already_here">This site already has %1$s %2$s of it. Saving sets the count to what you enter.</string>
     <string name="mat_add_help">For material that\'s already here. New deliveries go under Record delivery.</string>
     <string name="field_material_name">Material</string>
     <string name="field_material_name_placeholder">Cement, TMT bar, bricks</string>

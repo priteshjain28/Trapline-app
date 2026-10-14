@@ -116,8 +116,11 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             CheckRow(stringResource(R.string.part_photos), photos, { photos = it }, description = stringResource(R.string.part_photos_body),
                 enabled = updates)
             CheckRow(stringResource(R.string.part_attendance), attendance, { attendance = it }, description = stringResource(R.string.part_attendance_body))
-            CheckRow(stringResource(R.string.part_wages), wages && attendance, { wages = it }, description = stringResource(R.string.part_wages_body),
-                enabled = attendance)
+            // wages are pay, so only for the people who see money (as on the Wages tab)
+            if (canSeeMoney) {
+                CheckRow(stringResource(R.string.part_wages), wages && attendance, { wages = it }, description = stringResource(R.string.part_wages_body),
+                    enabled = attendance)
+            }
             CheckRow(stringResource(R.string.part_material), material, { material = it }, description = stringResource(R.string.part_material_body))
             CheckRow(stringResource(R.string.part_issues), issues, { issues = it }, description = stringResource(R.string.part_issues_body))
             if (canSeeMoney) {
@@ -131,7 +134,7 @@ fun ReportTab(project: Project, onReports: () -> Unit) {
             PrimaryButton(stringResource(R.string.action_create_report), {
                 busy = true
                 scope.launch {
-                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance, material, issues, payments && canSeeMoney)
+                    val parts = ReportParts(updates, photos && updates, attendance, wages && attendance && canSeeMoney, material, issues, payments && canSeeMoney)
                     container.reportService.create(NewReport(project.id, type, range.first, range.second, parts))
                         .onSuccess { error = null; onReports() }
                         .onFailure { error = it }
