@@ -312,8 +312,7 @@ class ReportAndFeedFlows : FlowTest() {
         tap(button("Activity"))
         waitFor("Ravi Singh logged progress")
         assertAccessible("S27 feed")
-        compose.onAllNodes(androidx.compose.ui.test.hasText("Open task") and androidx.compose.ui.test.hasClickAction())[0].performClick()
-        compose.waitForIdle()
+        tap(compose.onAllNodes(androidx.compose.ui.test.hasText("Open task") and androidx.compose.ui.test.hasClickAction())[0])
         waitFor("Log today's work")
     }
 }
