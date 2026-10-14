@@ -19,7 +19,7 @@ and fails on any exception. Never tested: the original app's servers.
 ## Results (2026-10-14)
 
 50 cases, 50 run: 49 pass, 1 partly (F02-H1: the PDF step is skipped under Robolectric and moved to the manual
-checklist). 7 bugs found, 7 fixed: 1 S2, 6 S3. Automated: 46 UI tests (Site app CI, green at ae36acc),
+checklist). 7 bugs found, 7 fixed: 1 S2, 6 S3. Automated: 46 UI tests (Site app CI, green at 58ad75d),
 31 core tests, the database tests and 9 Deno tests (Backend CI). The manual checklist below is still open: it needs a
 phone and your Supabase project.
 

@@ -110,7 +110,7 @@ Expected: "Register" underlined as the current sub-tab
 Actual: Register and Wages look the same; no underline
 Evidence: replica/clone-screens/S21.png, replica/test-screens/narrow-360dp-attendance.png (at ae36acc)
 Suspected cause: the 3dp underline used fillMaxWidth inside a horizontally scrolling row, so its width was 0
-Status: fixed in 58ad75d (confirm in the re-recorded S21 screenshot)
+Status: fixed in 58ad75d (re-recorded S21 shows the underline)
 
 ### BUG-007: layout breaks at 200% text size
 
@@ -127,7 +127,7 @@ Expected: text wraps or ends in "…"; nothing collides
 Actual: bottom-nav labels run together ("MaterialAttenda"), dates cut mid-word ("due 11", "13 Apr" with no year
 and no ellipsis), avatar initials spill out of the circle
 Evidence: replica/test-screens/font-200-projects.png, font-200-tasks.png (at ae36acc)
-Status: fixed in 58ad75d (nav labels stop growing at 1.3x, dates wrap to two lines, initials sized to the circle)
+Status: fixed in 58ad75d (nav labels stop growing at 1.3x, dates wrap to two lines, initials sized to the circle; re-recorded screenshots checked)
 
 ## To check (not reproduced)
 
