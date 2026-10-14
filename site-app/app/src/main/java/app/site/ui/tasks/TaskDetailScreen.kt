@@ -87,6 +87,7 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
     var remarks by rememberSaveable { mutableStateOf("") }
     var photos by rememberSaveable { mutableStateOf(listOf<String>()) }
     var pendingCapture by rememberSaveable { mutableStateOf<String?>(null) }
+    var shooting by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
 
@@ -100,6 +101,19 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
             val copied = picked.mapNotNull { container.photos.importPicked(it)?.toString() }
             photos = (photos + copied).take(10)
         }
+    }
+
+    if (shooting) {
+        app.site.ui.camera.InAppCamera(
+            onDone = { shooting = false; photos = (photos + it).take(10) },
+            onCancel = { shooting = false },
+            onUseSystemCamera = {
+                shooting = false
+                val uri = container.photos.newCaptureUri()
+                pendingCapture = uri.toString()
+                camera.launch(uri)
+            },
+        )
     }
 
     val t = task
@@ -143,11 +157,7 @@ fun TaskDetailScreen(taskId: String, onBack: () -> Unit) {
                         placeholder = stringResource(R.string.field_remarks_placeholder), singleLine = false, minLines = 2)
                     PhotoStrip(photos, onRemove = { u -> photos = photos - u })
                     Row(horizontalArrangement = Arrangement.spacedBy(Space.s2)) {
-                        SecondaryButton(stringResource(R.string.action_take_photo), {
-                            val uri = container.photos.newCaptureUri()
-                            pendingCapture = uri.toString()
-                            camera.launch(uri)
-                        }, icon = R.drawable.ic_camera)
+                        SecondaryButton(stringResource(R.string.action_take_photo), { shooting = true }, icon = R.drawable.ic_camera)
                         SecondaryButton(stringResource(R.string.action_from_gallery), {
                             gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         }, icon = R.drawable.ic_images)

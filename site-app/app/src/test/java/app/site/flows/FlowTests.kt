@@ -700,3 +700,20 @@ class MoneyFlows : FlowTest() {
         assertTrue(shows("That's more than what's still due"))
     }
 }
+
+/** S32: the in-app camera. Robolectric has no camera, so this covers asking for permission and the way out. */
+class CameraFlows : FlowTest() {
+    @Test fun cam_N1_withoutPermissionItAsksAndOffersTheFallback() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("Tasks"))
+        tap(text("#2 Brickwork level 3"))
+        scrollTo("Take photo")
+        tap(button("Take photo"))
+        waitFor("Allow the camera")
+        assertTrue(shows("Use the phone's camera app"))
+        assertAccessible("S32 camera permission")
+        tap(named("Close"))
+        waitFor("Log today's work")
+    }
+}

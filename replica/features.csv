@@ -26,7 +26,7 @@ Labour attendance by date with stepper,labour,must,yes,yes,"S21 observed; build:
 Add worker,labour,must,yes,yes,S21 FAB observed; S22 form inferred; build: S22
 Labour on site count,labour,must,yes,yes,S21 observed; build: S21
 Shift length setting (default 8 hours),labour,must,yes,yes,S24 observed; build: S24
-In-app camera for photos,photos,must,yes,partial,S32 observed; build: uses the phone's camera app via intent; S32 in-app camera not built
+In-app camera for photos,photos,must,yes,yes,"S32 observed; build: S32 in-app camera (CameraX): several shots in a row, flash, front/back, saved on the phone first; asks for permission, falls back to the phone's camera app; from work updates, Photos and More > Camera"
 Gallery of project photos,photos,must,yes,yes,"S30 observed; build: S30 every site photo (work updates + added via camera or phone gallery), grid and viewer"
 Activity feed with inline actions,feed,must,yes,yes,S27 observed; build: S27 open task action; replies not built
 Members and roles (org and project level),team,must,yes,yes,"S36 inferred from S25 Members; build: S36 people on a site, invite by phone with a role (SMS via server), change role, remove"

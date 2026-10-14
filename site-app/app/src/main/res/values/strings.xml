@@ -530,4 +530,18 @@
     <string name="report_pdf_issue_fixed">fixed</string>
     <string name="report_pdf_payments">Payments</string>
     <string name="report_pdf_payments_totals">Billed %1$s · paid %2$s · still due %3$s</string>
+
+    <!-- camera (S32) -->
+    <string name="camera_permission_title">Allow the camera</string>
+    <string name="camera_permission_body">Take site photos without leaving the app. They\'re saved on the phone first, so no signal is fine.</string>
+    <string name="camera_permission_denied">The camera is off for this app. Turn it on in the phone\'s settings, or use the phone\'s camera app.</string>
+    <string name="action_allow_camera">Allow camera</string>
+    <string name="action_use_phone_camera">Use the phone\'s camera app</string>
+    <string name="camera_failed">The camera couldn\'t take that one. Try again.</string>
+    <string name="camera_done">Done (%1$d)</string>
+    <string name="camera_saved_to_gallery">Added to the site\'s photos.</string>
+    <string name="a11y_take_photo">Take photo</string>
+    <string name="a11y_switch_camera">Switch camera</string>
+    <string name="a11y_flash_on">Flash on</string>
+    <string name="a11y_flash_off">Flash off</string>
 </resources>

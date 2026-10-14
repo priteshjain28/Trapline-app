@@ -73,6 +73,10 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    val camerax = "1.3.4"
+    implementation("androidx.camera:camera-camera2:$camerax")
+    implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-view:$camerax")
     implementation("app.cash.sqldelight:android-driver:2.0.2")
     implementation("io.ktor:ktor-client-okhttp:2.3.12")
     implementation("androidx.work:work-runtime-ktx:2.9.1")

@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.site.LocalContainer
+import kotlinx.coroutines.launch
 import app.site.ui.attendance.AddWorkerScreen
 import app.site.ui.attendance.AttendanceSettingsScreen
 import app.site.ui.auth.SignInScreen
@@ -136,10 +137,22 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                         Planned.MEMBERS -> nav.navigate("project/$projectId/team")
                         Planned.ISSUES -> nav.navigate("project/$projectId/issues")
                         Planned.EXPENSES -> nav.navigate("project/$projectId/expenses")
+                        Planned.CAMERA -> nav.navigate("project/$projectId/camera")
                         else -> nav.navigate(Routes.planned(it))
                     }
                 },
                 onMaterial = { nav.navigate(Routes.material(projectId, it)) },
+            )
+        }
+        composable("project/{pid}/camera", listOf(pid)) { e ->
+            val projectId = e.arguments?.getString("pid").orEmpty()
+            app.site.ui.camera.InAppCamera(
+                onDone = { uris ->
+                    // the app's scope: this screen leaves before the photos are saved
+                    container.appScope.launch { container.gallery.addPhotos(projectId, uris) }
+                    nav.navigate(Routes.gallery(projectId)) { popUpTo(Routes.PROJECT) }
+                },
+                onCancel = { nav.popBackStack() },
             )
         }
         composable(Routes.EXPENSES, listOf(pid)) { e ->

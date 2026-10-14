@@ -178,6 +178,7 @@ private fun AddPhotosSheet(projectId: String, albumId: String?, onDismiss: () ->
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     var pendingCapture by rememberSaveable { mutableStateOf<String?>(null) }
+    var shooting by rememberSaveable { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     fun add(uris: List<String>) {
         if (uris.isEmpty()) return
@@ -192,15 +193,23 @@ private fun AddPhotosSheet(projectId: String, albumId: String?, onDismiss: () ->
         // copied into app storage: picked URIs can lose permission before the upload runs
         scope.launch { add(picked.mapNotNull { container.photos.importPicked(it)?.toString() }) }
     }
+    if (shooting) {
+        app.site.ui.camera.InAppCamera(
+            onDone = { shooting = false; add(it) },
+            onCancel = { shooting = false },
+            onUseSystemCamera = {
+                shooting = false
+                val uri = container.photos.newCaptureUri()
+                pendingCapture = uri.toString()
+                camera.launch(uri)
+            },
+        )
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = SiteTheme.colors.bg) {
         Column(Modifier.navigationBarsPadding().padding(Size.gutter), verticalArrangement = Arrangement.spacedBy(Space.s3)) {
             Text(stringResource(R.string.action_add_photos), style = SiteTheme.type.lg, color = SiteTheme.colors.text)
             generalError(error)?.let { InfoBanner(it, tone = Tone.DANGER, icon = R.drawable.ic_circle_alert) }
-            SecondaryButton(stringResource(R.string.action_take_photo), {
-                val uri = container.photos.newCaptureUri()
-                pendingCapture = uri.toString()
-                camera.launch(uri)
-            }, Modifier.fillMaxWidth(), icon = R.drawable.ic_camera)
+            SecondaryButton(stringResource(R.string.action_take_photo), { shooting = true }, Modifier.fillMaxWidth(), icon = R.drawable.ic_camera)
             SecondaryButton(stringResource(R.string.action_from_gallery), {
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }, Modifier.fillMaxWidth(), icon = R.drawable.ic_images)

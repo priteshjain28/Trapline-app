@@ -17,6 +17,12 @@ class PhotoStore(private val context: Context) {
     private val authority = "${context.packageName}.files"
     private fun dir(name: String) = File(context.filesDir, name).apply { mkdirs() }
 
+    /** A file for the in-app camera to write into, and the URI the rest of the app uses for it. */
+    fun newCaptureFile(): Pair<File, Uri> {
+        val f = File(dir("photos"), "${UUID.randomUUID()}.jpg")
+        return f to FileProvider.getUriForFile(context, authority, f)
+    }
+
     /** A file the camera app writes into. */
     fun newCaptureUri(): Uri = FileProvider.getUriForFile(context, authority, File(dir("photos"), "${UUID.randomUUID()}.jpg"))
 
