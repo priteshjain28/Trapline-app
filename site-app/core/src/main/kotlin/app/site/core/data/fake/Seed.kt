@@ -93,6 +93,32 @@ internal object Seed {
                 tasks.first { it.id == u.taskId }.name, u.createdAt)
         }
 
+        // material on the tower: an opening count, two deliveries, two issues
+        fun material(name: String, spec: String, uom: String, category: String) =
+            app.site.core.model.Material(app.site.core.model.Material.idFor(org.id, name, spec, uom), org.id, name, spec, uom, category)
+        val cement = material("Cement", "OPC 53", "bag", "Binders")
+        val bricks = material("Red bricks", "Class A", "nos", "Masonry")
+        val sand = material("River sand", "", "m3", "Aggregates")
+        val steel = material("TMT bar", "Fe 500D 12mm", "kg", "Steel")
+        val materials = listOf(cement, bricks, sand, steel)
+        fun line(m: app.site.core.model.Material, q: Double) = app.site.core.model.MaterialLine(m.id, q)
+        val grns = listOf(
+            app.site.core.model.Grn(newId(), tower.id, 1, today.minusDays(12), "CH-1182", null, ravi.id,
+                listOf(line(cement, 200.0), line(bricks, 8000.0)), at(today.minusDays(12), 11)),
+            app.site.core.model.Grn(newId(), tower.id, 2, today.minusDays(5), "CH-1219", "Two bundles short, supplier to send Monday", meena.id,
+                listOf(line(sand, 12.0), line(steel, 1500.0)), at(today.minusDays(5), 15)),
+        )
+        val brickwork = tasks.first { it.projectId == tower.id && it.number == 2 }
+        val plaster = tasks.first { it.projectId == tower.id && it.number == 3 }
+        val issues = listOf(
+            app.site.core.model.MaterialIssue(newId(), tower.id, 1, brickwork.id, today.minusDays(6), ravi.id,
+                listOf(line(cement, 60.0), line(bricks, 5200.0)), at(today.minusDays(6), 9)),
+            app.site.core.model.MaterialIssue(newId(), tower.id, 2, plaster.id, today.minusDays(2), meena.id,
+                listOf(line(cement, 45.0), line(sand, 6.0)), at(today.minusDays(2), 9)),
+        )
+        val opening = FakeBackend.Adjustment(newId(), tower.id, cement.id, app.site.core.model.StockEntryKind.OPENING, 40.0,
+            today.minusDays(30), null, "Left from the slab pour", at(today.minusDays(30), 18))
+
         val projects = listOf(tower, villas, office).map { p ->
             p.copy(progressPct = Progress.project(tasks.filter { it.projectId == p.id }))
         }
@@ -105,7 +131,11 @@ internal object Seed {
             workers = workers.associateBy { it.id },
             attendance = attendance,
             events = events,
-            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1),
+            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1, "grns|${tower.id}" to 2, "issues|${tower.id}" to 2),
+            materials = materials.associateBy { it.id },
+            grns = grns.associateBy { it.id },
+            issues = issues.associateBy { it.id },
+            adjustments = mapOf(opening.id to opening),
         )
     }
 }

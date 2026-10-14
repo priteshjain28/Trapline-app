@@ -18,6 +18,12 @@ import app.site.core.remote.MemoryTokenStore
 import app.site.core.remote.RemoteError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import app.site.core.model.AdjustmentKind
+import app.site.core.model.MaterialLine
+import app.site.core.model.NewAdjustment
+import app.site.core.model.NewGrn
+import app.site.core.model.NewMaterial
+import app.site.core.model.NewMaterialIssue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -127,6 +133,53 @@ class SyncTest {
         a.app.clear(p.id, w.id, a.app.today())
         a.sync(); b.sync()
         assertTrue(b.app.day(p.id, b.app.today()).first().isEmpty())
+    }
+
+    @Test fun materialMovesAcrossPhones() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val b = Phone("9876500000")
+        b.signIn(name = "Ravi", org = null)
+        val orgId = server.rows("organisations").first().s("id")!!
+        val ravi = server.rows("profiles").first { it.s("name") == "Ravi" }.s("id")!!
+        server.tables["org_members"]!!.values.removeIf { it.s("user_id") == ravi }
+        server.addMember(orgId, ravi)
+        b.app.verifyOtp(b.number, "123456").getOrThrow()   // pick up the new organisation
+
+        val p = a.app.create(NewProject("Tower")).getOrThrow()
+        val t = a.app.create(NewTask(p.id, "Brickwork")).getOrThrow()
+        a.sync(); b.sync()
+
+        // both phones offline: each types "cement" its own way and takes a delivery
+        a.net.offline = true; b.net.offline = true
+        val ca = a.app.addMaterial(NewMaterial("Cement", "OPC 53", "bag")).getOrThrow()
+        a.app.receive(NewGrn(p.id, a.app.today(), listOf(MaterialLine(ca.id, 100.0)), challanNo = "CH-1")).getOrThrow()
+        a.app.issue(NewMaterialIssue(p.id, t.id, a.app.today(), listOf(MaterialLine(ca.id, 30.0)))).getOrThrow()
+        val cb = b.app.addMaterial(NewMaterial("cement", "opc 53", "Bag")).getOrThrow()
+        b.app.receive(NewGrn(p.id, b.app.today(), listOf(MaterialLine(cb.id, 50.0)))).getOrThrow()
+        assertEquals(70.0, a.app.stock(p.id).first().single().inStock, "stock moves on the phone straight away")
+        assertNull(a.app.grns(p.id).first().single().number, "number waits for the server")
+
+        a.net.offline = false; b.net.offline = false
+        a.sync(); b.sync(); a.sync()
+        assertEquals(1, server.rows("materials").size, "same material, one catalogue row")
+        assertEquals(120.0, a.app.stock(p.id).first().single().inStock)
+        assertEquals(120.0, b.app.stock(p.id).first().single().inStock)
+        assertEquals(setOf(1, 2), a.app.grns(p.id).first().map { it.number }.toSet())
+        assertEquals(1, b.app.issues(p.id).first().single().number)
+        assertEquals(listOf(MaterialLine(ca.id, 30.0)), b.app.issues(p.id).first().single().lines)
+        assertEquals(3, b.app.history(p.id, ca.id).first().size)
+
+        // a count on B records the difference only, and A sees the same stock
+        b.app.adjust(NewAdjustment(p.id, ca.id, AdjustmentKind.COUNTED, 118.0, b.app.today())).getOrThrow()
+        b.sync(); a.sync()
+        assertEquals(-2.0, server.rows("stock_adjustments").single().d("qty"))
+        assertEquals("correction", server.rows("stock_adjustments").single().s("kind"))
+        assertEquals(118.0, a.app.stock(p.id).first().single().inStock)
+
+        // B can't hand out more than the site holds, even offline
+        b.net.offline = true
+        val r = b.app.issue(NewMaterialIssue(p.id, t.id, b.app.today(), listOf(MaterialLine(ca.id, 119.0))))
+        assertEquals(AppError.Reason.NOT_ENOUGH_STOCK, (r.exceptionOrNull() as AppError.Invalid).reason)
     }
 
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {

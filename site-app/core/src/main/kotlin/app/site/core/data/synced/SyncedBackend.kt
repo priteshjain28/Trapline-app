@@ -73,6 +73,26 @@ import app.site.core.local.Report as ReportRow
 import app.site.core.local.Task as TaskRow
 import app.site.core.local.Task_update as UpdateRow
 import app.site.core.local.Worker as WorkerRow
+import app.site.core.local.Grn as GrnRow
+import app.site.core.local.Grn_line as GrnLineRow
+import app.site.core.local.Material as MaterialRow
+import app.site.core.local.Material_issue as IssueRow
+import app.site.core.local.Material_issue_line as IssueLineRow
+import app.site.core.local.Movements as MovementRow
+import app.site.core.local.Stock_adjustment as AdjustmentRow
+import app.site.core.logic.Stock
+import app.site.core.model.AdjustmentKind
+import app.site.core.model.Grn
+import app.site.core.model.Material
+import app.site.core.model.MaterialIssue
+import app.site.core.model.MaterialLine
+import app.site.core.model.NewAdjustment
+import app.site.core.model.NewGrn
+import app.site.core.model.NewMaterial
+import app.site.core.model.NewMaterialIssue
+import app.site.core.model.StockEntry
+import app.site.core.model.StockEntryKind
+import app.site.core.model.StockItem
 
 /**
  * The real data layer: the phone's database first, Supabase behind it.
@@ -90,7 +110,7 @@ class SyncedBackend(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository {
 
     private val q = db.siteQueries
 
@@ -101,6 +121,9 @@ class SyncedBackend(
             "projects" to q::deleteProject, "tasks" to q::deleteTask, "task_updates" to q::deleteUpdate,
             "media" to q::deleteMedia, "workers" to q::deleteWorker, "attendance" to q::deleteAttendance,
             "reports" to q::deleteReport, "activity_events" to q::deleteActivity,
+            "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine,
+            "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
+            "stock_adjustments" to q::deleteAdjustment,
         ),
         restore = ::restore,
     )
@@ -450,6 +473,154 @@ class SyncedBackend(
         )
     }
 
+    // ================================================================ material
+
+    override fun catalogue(): Flow<List<Material>> = q.catalogue().asFlow().mapToList(io).map { it.map(::material) }
+
+    override fun stock(projectId: String): Flow<List<StockItem>> =
+        combine(q.movements(projectId).asFlow().mapToList(io), q.catalogue().asFlow().mapToList(io)) { moves, cat ->
+            val byId = cat.associateBy { it.id }
+            moves.groupBy { it.material_id }.mapNotNull { (id, ms) ->
+                byId[id]?.let { StockItem(material(it), round3(ms.sumOf { m -> m.qty }), ms.maxOf { m -> m.day }.let(LocalDate::parse)) }
+            }.sortedBy { it.material.label.lowercase() }
+        }
+
+    override fun history(projectId: String, materialId: String): Flow<List<StockEntry>> =
+        q.movements(projectId).asFlow().mapToList(io).map { rows -> rows.filter { it.material_id == materialId }.map(::entry) }
+
+    // the movements query only signals "a line changed"; lines are read per document
+    override fun grns(projectId: String): Flow<List<Grn>> =
+        combine(q.grns(projectId).asFlow().mapToList(io), q.movements(projectId).asFlow().mapToList(io)) { rows, _ -> rows.map(::grn) }
+
+    override fun issues(projectId: String): Flow<List<MaterialIssue>> =
+        combine(q.issues(projectId).asFlow().mapToList(io), q.movements(projectId).asFlow().mapToList(io)) { rows, _ -> rows.map(::issue) }
+
+    override suspend fun addMaterial(input: NewMaterial): Result<Material> = call {
+        val org = _session.value?.org ?: throw AppError.NotAllowed
+        val v = Validate.material(input).getOrThrow()
+        val id = Material.idFor(org.id, v.name, v.spec, v.uom)
+        q.material(id).executeAsOneOrNull()?.let { return@call material(it) }
+        val row = MaterialRow(id, org.id, v.name, v.spec, v.uom, v.category)
+        db.transaction {
+            q.upsertMaterial(row)
+            // the id comes from the name, so the same material added on another phone merges into this row
+            engine.enqueueUpsert("materials", id, buildJsonObject {
+                put("id", id); put("org_id", org.id); put("name", v.name); put("spec", v.spec); put("uom", v.uom); putOrNull("category", v.category)
+            })
+        }
+        syncNow()
+        material(row)
+    }
+
+    override suspend fun receive(input: NewGrn): Result<Grn> = call {
+        val user = me()
+        val lines = Validate.lines(input.lines).getOrThrow()
+        Validate.notFuture(input.receivedOn, today()).getOrThrow()
+        q.project(input.projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        if (lines.any { q.material(it.materialId).executeAsOneOrNull() == null }) throw AppError.NotAllowed
+        val row = GrnRow(newId(), input.projectId, null, input.receivedOn.toString(), input.challanNo?.trim()?.ifBlank { null },
+            input.notes?.trim()?.ifBlank { null }, user.id, now())
+        db.transaction {
+            q.upsertGrn(row)
+            engine.enqueueUpsert("grns", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("received_on", row.received_on)
+                putOrNull("challan_no", row.challan_no); putOrNull("notes", row.notes); put("received_by", user.id)
+            })
+            // header first, then its lines: the outbox sends in order
+            for (l in lines) {
+                val line = GrnLineRow(newId(), row.id, l.materialId, l.qty)
+                q.upsertGrnLine(line)
+                engine.enqueueUpsert("grn_lines", line.id, buildJsonObject {
+                    put("id", line.id); put("grn_id", row.id); put("material_id", l.materialId); put("qty", l.qty)
+                })
+            }
+        }
+        syncNow()
+        grn(row)
+    }
+
+    override suspend fun issue(input: NewMaterialIssue): Result<MaterialIssue> = call {
+        val user = me()
+        val lines = Validate.lines(input.lines).getOrThrow()
+        Validate.notFuture(input.issuedOn, today()).getOrThrow()
+        val task = q.task(input.taskId).executeAsOneOrNull()
+        if (task == null || task.project_id != input.projectId) throw AppError.Invalid("task", AppError.Reason.REQUIRED)
+        Stock.canIssue(lines, inStock(input.projectId)).getOrThrow()
+        val row = IssueRow(newId(), input.projectId, null, task.id, null, input.issuedOn.toString(), user.id, now())
+        db.transaction {
+            q.upsertIssue(row)
+            engine.enqueueUpsert("material_issues", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("task_id", task.id); put("issued_on", row.issued_on)
+                put("issued_by", user.id)
+            })
+            for (l in lines) {
+                val line = IssueLineRow(newId(), row.id, l.materialId, l.qty)
+                q.upsertIssueLine(line)
+                engine.enqueueUpsert("material_issue_lines", line.id, buildJsonObject {
+                    put("id", line.id); put("material_issue_id", row.id); put("material_id", l.materialId); put("qty", l.qty)
+                })
+            }
+        }
+        syncNow()
+        issue(row)
+    }
+
+    override suspend fun adjust(input: NewAdjustment): Result<Unit> = call {
+        val user = me()
+        Validate.notFuture(input.date, today()).getOrThrow()
+        q.material(input.materialId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val current = inStock(input.projectId)[input.materialId] ?: 0.0
+        val notPositive = AppError.Invalid("qty", AppError.Reason.NOT_POSITIVE)
+        val (kind, qty) = when (input.kind) {
+            AdjustmentKind.OPENING -> if (input.qty > 0) "opening" to input.qty else throw notPositive
+            AdjustmentKind.USED -> {
+                if (!(input.qty > 0)) throw notPositive
+                Stock.canIssue(listOf(MaterialLine(input.materialId, input.qty)), mapOf(input.materialId to current)).getOrThrow()
+                "consumption" to -input.qty
+            }
+            AdjustmentKind.COUNTED -> {
+                if (input.qty < 0 || input.qty.isNaN()) throw notPositive
+                "correction" to (Stock.correction(current, input.qty) ?: return@call)
+            }
+        }
+        val row = AdjustmentRow(newId(), input.projectId, null, input.materialId, kind, qty, input.taskId, input.date.toString(),
+            input.note?.trim()?.ifBlank { null }, now())
+        db.transaction {
+            q.upsertAdjustment(row)
+            engine.enqueueUpsert("stock_adjustments", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("material_id", row.material_id); put("kind", kind)
+                put("qty", qty); putOrNull("task_id", row.task_id); put("adjusted_on", row.adjusted_on); putOrNull("note", row.note)
+                put("created_by", user.id)
+            })
+        }
+        syncNow()
+    }
+
+    private fun inStock(projectId: String): Map<String, Double> =
+        q.movements(projectId).executeAsList().groupBy { it.material_id }.mapValues { (_, ms) -> round3(ms.sumOf { it.qty }) }
+
+    private fun round3(x: Double) = Math.round(x * 1000) / 1000.0
+
+    private fun material(r: MaterialRow) = Material(r.id, r.org_id, r.name, r.spec, r.uom, r.category)
+
+    private fun grn(r: GrnRow) = Grn(r.id, r.project_id, r.number?.toInt(), LocalDate.parse(r.received_on), r.challan_no, r.notes,
+        r.received_by, q.grnLines(r.id).executeAsList().map { MaterialLine(it.material_id, it.qty) }, SyncEngine.parseInstant(r.created_at))
+
+    private fun issue(r: IssueRow) = MaterialIssue(r.id, r.project_id, r.number?.toInt(), r.task_id.orEmpty(), LocalDate.parse(r.issued_on),
+        r.issued_by, q.issueLines(r.id).executeAsList().map { MaterialLine(it.material_id, it.qty) }, SyncEngine.parseInstant(r.created_at))
+
+    private fun entry(m: MovementRow) = StockEntry(
+        m.entry_id,
+        when (m.kind) {
+            "received" -> StockEntryKind.RECEIVED
+            "issued" -> StockEntryKind.ISSUED
+            "opening" -> StockEntryKind.OPENING
+            "consumption" -> StockEntryKind.USED
+            else -> StockEntryKind.CORRECTED
+        },
+        m.qty, LocalDate.parse(m.day), m.number?.toInt(), m.task_id, m.note, SyncEngine.parseInstant(m.created_at),
+    )
+
     // ================================================================ feed
 
     override fun feed(projectId: String): Flow<List<ActivityEvent>> =
@@ -504,6 +675,27 @@ class SyncedBackend(
             q.upsertReport(ReportRow(o.str("id"), o.str("project_id"), o.str("type"), o.str("from_date"), o.str("to_date"),
                 o["parts"]?.toString() ?: "{}", o.str("status"), o.strOrNull("storage_path"), old?.local_file, o.str("created_at"), o.str("expires_at")))
         }, { it.str("id") }),
+        SyncEngine.PullSpec("materials", "id,org_id,name,spec,uom,category,updated_at", { o ->
+            q.upsertMaterial(MaterialRow(o.str("id"), o.str("org_id"), o.str("name"), o.strOrNull("spec").orEmpty(), o.str("uom"), o.strOrNull("category")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("grns", "id,project_id,number,received_on,challan_no,notes,received_by,created_at,updated_at", { o ->
+            q.upsertGrn(GrnRow(o.str("id"), o.str("project_id"), o.lngOrNull("number"), o.str("received_on"), o.strOrNull("challan_no"),
+                o.strOrNull("notes"), o.strOrNull("received_by"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("grn_lines", "id,grn_id,material_id,qty,updated_at", { o ->
+            q.upsertGrnLine(GrnLineRow(o.str("id"), o.str("grn_id"), o.str("material_id"), o.dbl("qty")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("material_issues", "id,project_id,number,task_id,subcontractor_id,issued_on,issued_by,created_at,updated_at", { o ->
+            q.upsertIssue(IssueRow(o.str("id"), o.str("project_id"), o.lngOrNull("number"), o.strOrNull("task_id"), o.strOrNull("subcontractor_id"),
+                o.str("issued_on"), o.strOrNull("issued_by"), o.str("created_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("material_issue_lines", "id,material_issue_id,material_id,qty,updated_at", { o ->
+            q.upsertIssueLine(IssueLineRow(o.str("id"), o.str("material_issue_id"), o.str("material_id"), o.dbl("qty")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("stock_adjustments", "id,project_id,subcontractor_id,material_id,kind,qty,task_id,adjusted_on,note,created_at,updated_at", { o ->
+            q.upsertAdjustment(AdjustmentRow(o.str("id"), o.str("project_id"), o.strOrNull("subcontractor_id"), o.str("material_id"), o.str("kind"),
+                o.dbl("qty"), o.strOrNull("task_id"), o.str("adjusted_on"), o.strOrNull("note"), o.str("created_at")))
+        }, { it.str("id") }),
         SyncEngine.PullSpec("activity_events", "id,project_id,actor_id,verb,entity_id,summary,created_at,updated_at", { o ->
             q.upsertActivity(ActivityRow(o.str("id"), o.str("project_id"), o.strOrNull("actor_id"), o.str("verb"), o.strOrNull("entity_id"),
                 o.strOrNull("summary").orEmpty(), o.str("created_at")))
@@ -533,6 +725,8 @@ class SyncedBackend(
     private val engineDeleteHandlers: Map<String, (String) -> Unit> = mapOf(
         "projects" to q::deleteProject, "tasks" to q::deleteTask, "task_updates" to q::deleteUpdate, "media" to q::deleteMedia,
         "workers" to q::deleteWorker, "reports" to q::deleteReport,
+        "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine, "material_issues" to q::deleteIssue,
+        "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment,
     )
 
     // ================================================================ errors

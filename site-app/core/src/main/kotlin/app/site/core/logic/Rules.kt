@@ -57,6 +57,34 @@ object Validate {
         else -> Result.success(w.copy(name = w.name.trim(), skill = w.skill?.trim()?.ifBlank { null }))
     }
 
+    const val MATERIAL_NAME_MAX = 80
+    const val MATERIAL_SPEC_MAX = 60
+    const val UOM_MAX = 12
+
+    fun material(m: app.site.core.model.NewMaterial): Result<app.site.core.model.NewMaterial> {
+        val name = m.name.trim().replace(Regex("\\s+"), " ")
+        val spec = m.spec.trim().replace(Regex("\\s+"), " ")
+        val uom = m.uom.trim()
+        return when {
+            name.isEmpty() -> fail("name", Reason.REQUIRED)
+            name.length > MATERIAL_NAME_MAX -> fail("name", Reason.TOO_LONG)
+            spec.length > MATERIAL_SPEC_MAX -> fail("spec", Reason.TOO_LONG)
+            uom.isEmpty() -> fail("uom", Reason.REQUIRED)
+            uom.length > UOM_MAX -> fail("uom", Reason.TOO_LONG)
+            else -> Result.success(m.copy(name = name, spec = spec, uom = uom, category = m.category?.trim()?.ifBlank { null }))
+        }
+    }
+
+    /** At least one line, every quantity above zero; the same material twice becomes one line. */
+    fun lines(lines: List<app.site.core.model.MaterialLine>): Result<List<app.site.core.model.MaterialLine>> = when {
+        lines.isEmpty() -> fail("lines", Reason.REQUIRED)
+        lines.any { !(it.qty > 0) } -> fail("qty", Reason.NOT_POSITIVE)
+        else -> Result.success(lines.groupBy { it.materialId }.map { (id, ls) -> app.site.core.model.MaterialLine(id, ls.sumOf { it.qty }) })
+    }
+
+    fun notFuture(date: LocalDate, today: LocalDate): Result<Unit> =
+        if (date.isAfter(today)) fail("date", Reason.IN_FUTURE) else Result.success(Unit)
+
     fun range(from: LocalDate, to: LocalDate): Result<Unit> =
         if (to.isBefore(from)) fail("to", Reason.END_BEFORE_START) else Result.success(Unit)
 
@@ -130,4 +158,19 @@ object Wages {
             if (amount > 0 || days > 0) Line(w, days, ot, amount) else null
         }
     }
+}
+
+/** Stock on a site: what came in, minus what went out, plus corrections. Same rule as the server's stock ledger. */
+object Stock {
+    /** Quantities are compared to 3 decimals, like the server's numeric(14,3). */
+    private const val EPS = 0.0005
+
+    /** Refuses to hand out more than the site holds, naming nothing: the screen shows the shortfall per line. */
+    fun canIssue(lines: List<app.site.core.model.MaterialLine>, inStock: Map<String, Double>): Result<Unit> =
+        if (lines.any { it.qty > (inStock[it.materialId] ?: 0.0) + EPS }) Result.failure(AppError.Invalid("qty", Reason.NOT_ENOUGH_STOCK))
+        else Result.success(Unit)
+
+    /** For a count: the correction that brings [current] to [counted]; null when nothing changes. */
+    fun correction(current: Double, counted: Double): Double? =
+        (counted - current).takeIf { kotlin.math.abs(it) > EPS }?.let { Math.round(it * 1000) / 1000.0 }
 }

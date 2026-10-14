@@ -114,6 +114,71 @@ CREATE TABLE activity (
 );
 CREATE INDEX activity_project ON activity(project_id, created_at);
 
+-- Material. Stock is never stored: it is the sum of these rows, like the server's stock_movements ledger.
+CREATE TABLE material (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  spec TEXT NOT NULL DEFAULT '',
+  uom TEXT NOT NULL,
+  category TEXT
+);
+
+CREATE TABLE grn (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  received_on TEXT NOT NULL,
+  challan_no TEXT,
+  notes TEXT,
+  received_by TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX grn_project ON grn(project_id);
+
+CREATE TABLE grn_line (
+  id TEXT NOT NULL PRIMARY KEY,
+  grn_id TEXT NOT NULL,
+  material_id TEXT NOT NULL,
+  qty REAL NOT NULL
+);
+CREATE INDEX grn_line_grn ON grn_line(grn_id);
+
+CREATE TABLE material_issue (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  task_id TEXT,
+  subcontractor_id TEXT,
+  issued_on TEXT NOT NULL,
+  issued_by TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX material_issue_project ON material_issue(project_id);
+
+CREATE TABLE material_issue_line (
+  id TEXT NOT NULL PRIMARY KEY,
+  material_issue_id TEXT NOT NULL,
+  material_id TEXT NOT NULL,
+  qty REAL NOT NULL
+);
+CREATE INDEX material_issue_line_issue ON material_issue_line(material_issue_id);
+
+-- kind: opening | consumption | correction (server names); qty signed
+CREATE TABLE stock_adjustment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  subcontractor_id TEXT,
+  material_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  qty REAL NOT NULL,
+  task_id TEXT,
+  adjusted_on TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX stock_adjustment_project ON stock_adjustment(project_id);
+
 -- Changes made here, waiting to go to the server, oldest first.
 CREATE TABLE outbox (
   seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -239,6 +304,63 @@ SELECT * FROM activity WHERE project_id = ? ORDER BY created_at DESC;
 deleteActivity:
 DELETE FROM activity WHERE id = ?;
 
+-- ---------------------------------------------------------------- material
+
+upsertMaterial:
+INSERT OR REPLACE INTO material VALUES ?;
+material:
+SELECT * FROM material WHERE id = ?;
+catalogue:
+SELECT * FROM material ORDER BY lower(name), lower(spec);
+deleteMaterial:
+DELETE FROM material WHERE id = ?;
+
+upsertGrn:
+INSERT OR REPLACE INTO grn VALUES ?;
+grns:
+SELECT * FROM grn WHERE project_id = ? ORDER BY received_on DESC, created_at DESC;
+grnLines:
+SELECT * FROM grn_line WHERE grn_id = ?;
+deleteGrn:
+DELETE FROM grn WHERE id = ?;
+upsertGrnLine:
+INSERT OR REPLACE INTO grn_line VALUES ?;
+deleteGrnLine:
+DELETE FROM grn_line WHERE id = ?;
+
+upsertIssue:
+INSERT OR REPLACE INTO material_issue VALUES ?;
+issues:
+SELECT * FROM material_issue WHERE project_id = ? ORDER BY issued_on DESC, created_at DESC;
+issueLines:
+SELECT * FROM material_issue_line WHERE material_issue_id = ?;
+deleteIssue:
+DELETE FROM material_issue WHERE id = ?;
+upsertIssueLine:
+INSERT OR REPLACE INTO material_issue_line VALUES ?;
+deleteIssueLine:
+DELETE FROM material_issue_line WHERE id = ?;
+
+upsertAdjustment:
+INSERT OR REPLACE INTO stock_adjustment VALUES ?;
+deleteAdjustment:
+DELETE FROM stock_adjustment WHERE id = ?;
+
+-- Every stock movement of the site's own inventory: + in, - out. Issues reduce site stock whoever they go to.
+movements:
+SELECT entry_id, material_id, kind, qty, day, number, task_id, note, created_at FROM (
+  SELECT l.id AS entry_id, l.material_id AS material_id, 'received' AS kind, l.qty AS qty, g.received_on AS day, g.number AS number,
+         NULL AS task_id, g.challan_no AS note, g.created_at AS created_at
+  FROM grn_line l JOIN grn g ON g.id = l.grn_id WHERE g.project_id = :projectId
+  UNION ALL
+  SELECT l.id, l.material_id, 'issued', -l.qty, i.issued_on, i.number, i.task_id, NULL, i.created_at
+  FROM material_issue_line l JOIN material_issue i ON i.id = l.material_issue_id WHERE i.project_id = :projectId
+  UNION ALL
+  SELECT a.id, a.material_id, a.kind, a.qty, a.adjusted_on, NULL, a.task_id, a.note, a.created_at
+  FROM stock_adjustment a WHERE a.project_id = :projectId AND a.subcontractor_id IS NULL
+)
+ORDER BY day DESC, created_at DESC;
+
 -- ---------------------------------------------------------------- outbox and cursors
 
 enqueue:
@@ -278,6 +400,12 @@ wipe {
   DELETE FROM attendance;
   DELETE FROM report;
   DELETE FROM activity;
+  DELETE FROM material;
+  DELETE FROM grn;
+  DELETE FROM grn_line;
+  DELETE FROM material_issue;
+  DELETE FROM material_issue_line;
+  DELETE FROM stock_adjustment;
   DELETE FROM outbox;
   DELETE FROM sync_cursor;
   DELETE FROM kv;

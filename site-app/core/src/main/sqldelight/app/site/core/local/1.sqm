@@ -1,0 +1,66 @@
+-- Version 1 -> 2: material (catalogue, goods received, issues, stock adjustments).
+
+CREATE TABLE material (
+  id TEXT NOT NULL PRIMARY KEY,
+  org_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  spec TEXT NOT NULL DEFAULT '',
+  uom TEXT NOT NULL,
+  category TEXT
+);
+
+CREATE TABLE grn (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  received_on TEXT NOT NULL,
+  challan_no TEXT,
+  notes TEXT,
+  received_by TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX grn_project ON grn(project_id);
+
+CREATE TABLE grn_line (
+  id TEXT NOT NULL PRIMARY KEY,
+  grn_id TEXT NOT NULL,
+  material_id TEXT NOT NULL,
+  qty REAL NOT NULL
+);
+CREATE INDEX grn_line_grn ON grn_line(grn_id);
+
+CREATE TABLE material_issue (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  task_id TEXT,
+  subcontractor_id TEXT,
+  issued_on TEXT NOT NULL,
+  issued_by TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX material_issue_project ON material_issue(project_id);
+
+CREATE TABLE material_issue_line (
+  id TEXT NOT NULL PRIMARY KEY,
+  material_issue_id TEXT NOT NULL,
+  material_id TEXT NOT NULL,
+  qty REAL NOT NULL
+);
+CREATE INDEX material_issue_line_issue ON material_issue_line(material_issue_id);
+
+-- kind: opening | consumption | correction (server names); qty signed
+CREATE TABLE stock_adjustment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  subcontractor_id TEXT,
+  material_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  qty REAL NOT NULL,
+  task_id TEXT,
+  adjusted_on TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX stock_adjustment_project ON stock_adjustment(project_id);
+

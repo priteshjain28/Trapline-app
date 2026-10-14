@@ -30,6 +30,18 @@ import app.site.core.model.Task
 import app.site.core.model.TaskUpdate
 import app.site.core.model.User
 import app.site.core.model.Worker
+import app.site.core.model.AdjustmentKind
+import app.site.core.model.Grn
+import app.site.core.model.Material
+import app.site.core.model.MaterialIssue
+import app.site.core.model.NewAdjustment
+import app.site.core.model.NewGrn
+import app.site.core.model.NewMaterial
+import app.site.core.model.NewMaterialIssue
+import app.site.core.model.StockEntry
+import app.site.core.model.StockEntryKind
+import app.site.core.model.StockItem
+import app.site.core.logic.Stock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,7 +66,7 @@ class FakeBackend(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -74,6 +86,16 @@ class FakeBackend(
         val reports: Map<String, Report> = emptyMap(),
         val events: List<ActivityEvent> = emptyList(),
         val counters: Map<String, Int> = emptyMap(),
+        val materials: Map<String, Material> = emptyMap(),
+        val grns: Map<String, Grn> = emptyMap(),
+        val issues: Map<String, MaterialIssue> = emptyMap(),
+        val adjustments: Map<String, Adjustment> = emptyMap(),
+    )
+
+    /** A stock_adjustments row: [qty] is signed, like the server's. */
+    internal data class Adjustment(
+        val id: String, val projectId: String, val materialId: String, val kind: StockEntryKind, val qty: Double,
+        val date: LocalDate, val taskId: String?, val note: String?, val createdAt: java.time.Instant,
     )
 
     private val state = MutableStateFlow(State())
@@ -299,6 +321,121 @@ class FakeBackend(
         state.update { s -> val r = s.reports[id] ?: return@update s; s.copy(reports = s.reports + (id to f(r))) }
         return Result.success(Unit)
     }
+
+    // ------------------------------------------------------------------ material
+
+    override fun catalogue(): Flow<List<Material>> = state.map { s -> s.materials.values.sortedBy { it.label.lowercase() } }
+
+    override fun stock(projectId: String): Flow<List<StockItem>> = state.map { s -> stockOf(s, projectId) }
+
+    override fun history(projectId: String, materialId: String): Flow<List<StockEntry>> = state.map { s ->
+        entries(s, projectId).filter { it.first == materialId }.map { it.second }
+            .sortedWith(compareByDescending<StockEntry> { it.date }.thenByDescending { it.createdAt })
+    }
+
+    override fun grns(projectId: String): Flow<List<Grn>> = state.map { s ->
+        s.grns.values.filter { it.projectId == projectId }.sortedWith(compareByDescending<Grn> { it.receivedOn }.thenByDescending { it.createdAt })
+    }
+
+    override fun issues(projectId: String): Flow<List<MaterialIssue>> = state.map { s ->
+        s.issues.values.filter { it.projectId == projectId }
+            .sortedWith(compareByDescending<MaterialIssue> { it.issuedOn }.thenByDescending { it.createdAt })
+    }
+
+    override suspend fun addMaterial(input: NewMaterial): Result<Material> {
+        io()
+        val v = Validate.material(input).getOrElse { return Result.failure(it) }
+        val org = state.value.org ?: return Result.failure(AppError.NotAllowed)
+        val id = Material.idFor(org.id, v.name, v.spec, v.uom)
+        state.value.materials[id]?.let { return Result.success(it) }
+        val m = Material(id, org.id, v.name, v.spec, v.uom, v.category)
+        state.update { it.copy(materials = it.materials + (m.id to m)) }
+        return Result.success(m)
+    }
+
+    override suspend fun receive(input: NewGrn): Result<Grn> {
+        io()
+        val by = runCatching { me() }.getOrElse { return Result.failure(it) }
+        val lines = Validate.lines(input.lines).getOrElse { return Result.failure(it) }
+        Validate.notFuture(input.receivedOn, today()).getOrElse { return Result.failure(it) }
+        val s0 = state.value
+        if (s0.projects[input.projectId] == null || lines.any { s0.materials[it.materialId] == null }) return Result.failure(AppError.NotAllowed)
+        var grn: Grn? = null
+        state.update { s ->
+            val n = (s.counters["grns|${input.projectId}"] ?: 0) + 1
+            val g = Grn(newId(), input.projectId, n, input.receivedOn, input.challanNo?.trim()?.ifBlank { null },
+                input.notes?.trim()?.ifBlank { null }, by.id, lines, clock.instant())
+            grn = g
+            s.copy(grns = s.grns + (g.id to g), counters = s.counters + ("grns|${input.projectId}" to n))
+        }
+        return Result.success(grn!!)
+    }
+
+    override suspend fun issue(input: NewMaterialIssue): Result<MaterialIssue> {
+        io()
+        val by = runCatching { me() }.getOrElse { return Result.failure(it) }
+        val lines = Validate.lines(input.lines).getOrElse { return Result.failure(it) }
+        Validate.notFuture(input.issuedOn, today()).getOrElse { return Result.failure(it) }
+        val task = state.value.tasks[input.taskId]
+        if (task == null || task.projectId != input.projectId) return Result.failure(AppError.Invalid("task", AppError.Reason.REQUIRED))
+        Stock.canIssue(lines, inStock(state.value, input.projectId)).getOrElse { return Result.failure(it) }
+        var issue: MaterialIssue? = null
+        state.update { s ->
+            val n = (s.counters["issues|${input.projectId}"] ?: 0) + 1
+            val i = MaterialIssue(newId(), input.projectId, n, task.id, input.issuedOn, by.id, lines, clock.instant())
+            issue = i
+            s.copy(issues = s.issues + (i.id to i), counters = s.counters + ("issues|${input.projectId}" to n))
+        }
+        return Result.success(issue!!)
+    }
+
+    override suspend fun adjust(input: NewAdjustment): Result<Unit> {
+        io()
+        runCatching { me() }.getOrElse { return Result.failure(it) }
+        Validate.notFuture(input.date, today()).getOrElse { return Result.failure(it) }
+        if (state.value.materials[input.materialId] == null) return Result.failure(AppError.NotAllowed)
+        val current = inStock(state.value, input.projectId)[input.materialId] ?: 0.0
+        val (kind, qty) = when (input.kind) {
+            AdjustmentKind.OPENING -> if (input.qty > 0) StockEntryKind.OPENING to input.qty else return notPositive()
+            AdjustmentKind.USED -> when {
+                !(input.qty > 0) -> return notPositive()
+                Stock.canIssue(listOf(app.site.core.model.MaterialLine(input.materialId, input.qty)), mapOf(input.materialId to current)).isFailure ->
+                    return Result.failure(AppError.Invalid("qty", AppError.Reason.NOT_ENOUGH_STOCK))
+                else -> StockEntryKind.USED to -input.qty
+            }
+            AdjustmentKind.COUNTED -> if (input.qty < 0) return notPositive()
+                else StockEntryKind.CORRECTED to (Stock.correction(current, input.qty) ?: return Result.success(Unit))
+        }
+        val a = Adjustment(newId(), input.projectId, input.materialId, kind, qty, input.date, input.taskId,
+            input.note?.trim()?.ifBlank { null }, clock.instant())
+        state.update { it.copy(adjustments = it.adjustments + (a.id to a)) }
+        return Result.success(Unit)
+    }
+
+    private fun notPositive(): Result<Unit> = Result.failure(AppError.Invalid("qty", AppError.Reason.NOT_POSITIVE))
+
+    /** (materialId, entry) for everything that moved stock on this site. */
+    private fun entries(s: State, projectId: String): List<Pair<String, StockEntry>> = buildList {
+        s.grns.values.filter { it.projectId == projectId }.forEach { g ->
+            g.lines.forEach { l -> add(l.materialId to StockEntry("${g.id}|${l.materialId}", StockEntryKind.RECEIVED, l.qty, g.receivedOn, g.number, note = g.challanNo, createdAt = g.createdAt)) }
+        }
+        s.issues.values.filter { it.projectId == projectId }.forEach { i ->
+            i.lines.forEach { l -> add(l.materialId to StockEntry("${i.id}|${l.materialId}", StockEntryKind.ISSUED, -l.qty, i.issuedOn, i.number, i.taskId, createdAt = i.createdAt)) }
+        }
+        s.adjustments.values.filter { it.projectId == projectId }.forEach { a ->
+            add(a.materialId to StockEntry(a.id, a.kind, a.qty, a.date, taskId = a.taskId, note = a.note, createdAt = a.createdAt))
+        }
+    }
+
+    private fun inStock(s: State, projectId: String): Map<String, Double> =
+        entries(s, projectId).groupBy({ it.first }, { it.second.qty }).mapValues { (_, qs) -> round3(qs.sum()) }
+
+    private fun stockOf(s: State, projectId: String): List<StockItem> =
+        entries(s, projectId).groupBy({ it.first }, { it.second }).mapNotNull { (id, es) ->
+            s.materials[id]?.let { m -> StockItem(m, round3(es.sumOf { it.qty }), es.maxOf { it.date }) }
+        }.sortedBy { it.material.label.lowercase() }
+
+    private fun round3(x: Double) = Math.round(x * 1000) / 1000.0
 
     // ------------------------------------------------------------------ feed
 

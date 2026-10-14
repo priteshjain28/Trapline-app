@@ -36,7 +36,7 @@ sealed class AppError(message: String) : Exception(message) {
     /** The only owner can't leave while other people are in the organisation. */
     data object OwnerMustTransfer : AppError("owner must transfer")
 
-    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE }
+    enum class Reason { REQUIRED, TOO_LONG, END_BEFORE_START, NOT_POSITIVE, WRONG_CODE, BAD_PHONE, NOT_ENOUGH_STOCK, IN_FUTURE }
 }
 
 interface SessionRepository {
@@ -116,4 +116,26 @@ interface ReportRepository {
 
 interface ActivityRepository {
     fun feed(projectId: String): Flow<List<ActivityEvent>>
+}
+
+/**
+ * Material on a site: the organisation's catalogue, goods received, material issued to tasks and stock updates.
+ * Stock is computed from those records (never stored), so it is right on every phone once they sync.
+ */
+interface MaterialRepository {
+    /** The organisation's catalogue, for pickers. */
+    fun catalogue(): Flow<List<app.site.core.model.Material>>
+    /** Every material this site has had, with what it holds now. */
+    fun stock(projectId: String): Flow<List<app.site.core.model.StockItem>>
+    /** One material's in and out on this site, newest first. */
+    fun history(projectId: String, materialId: String): Flow<List<app.site.core.model.StockEntry>>
+    fun grns(projectId: String): Flow<List<app.site.core.model.Grn>>
+    fun issues(projectId: String): Flow<List<app.site.core.model.MaterialIssue>>
+    /** Adds to the catalogue, or returns the existing entry with the same name, spec and unit. */
+    suspend fun addMaterial(input: app.site.core.model.NewMaterial): Result<app.site.core.model.Material>
+    suspend fun receive(input: app.site.core.model.NewGrn): Result<app.site.core.model.Grn>
+    /** Refused with [AppError.Reason.NOT_ENOUGH_STOCK] when a line is more than the site holds. */
+    suspend fun issue(input: app.site.core.model.NewMaterialIssue): Result<app.site.core.model.MaterialIssue>
+    /** Opening stock, material used, or a count. A count that matches the stock records nothing. */
+    suspend fun adjust(input: app.site.core.model.NewAdjustment): Result<Unit>
 }
