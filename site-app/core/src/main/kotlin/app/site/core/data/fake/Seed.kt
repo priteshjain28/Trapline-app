@@ -25,7 +25,8 @@ internal object Seed {
 
         val ravi = User(newId(), "Ravi Singh", "+919800000001")
         val meena = User(newId(), "Meena Iyer", "+919800000002")
-        val org = Organisation(newId(), "Sharma Constructions")
+        // on a paid plan, so the demo can still add sites past the free plan's 3
+        val org = Organisation(newId(), "Sharma Constructions", app.site.core.model.Plan.PRO)
 
         val tower = Project(
             newId(), org.id, "Green Park Tower B", ProjectStatus.ACTIVE, "Sector 21, Gurugram",

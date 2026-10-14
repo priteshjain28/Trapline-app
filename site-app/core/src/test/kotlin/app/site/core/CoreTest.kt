@@ -143,6 +143,20 @@ class FakeBackendTest {
             b.feed(p.id).first().reversed().map { it.verb.name })
     }
 
+    // BUG-001: the demo let a free organisation add a 4th active site; the server refuses it
+    @Test fun demoEnforcesTheFreePlanLikeTheServer() = runTest {
+        val b = backend(seed = false)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP)
+        repeat(3) { b.create(NewProject("Site ${'$'}it")).getOrThrow() }
+        assertEquals(AppError.PlanLimit("projects"), b.create(NewProject("Site 4")).exceptionOrNull())
+    }
+
+    @Test fun demoSeedOrgHasRoomForMoreSites() = runTest {
+        val b = backend()
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP)
+        assertTrue(b.create(NewProject("Riverside Row Houses")).isSuccess, "the demo org is on a paid plan")
+    }
+
     @Test fun emptyUpdateRejected() = runTest {
         val b = backend()
         b.verifyOtp("9812345678", FakeBackend.DEMO_OTP)

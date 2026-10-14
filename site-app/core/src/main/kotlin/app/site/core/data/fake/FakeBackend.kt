@@ -58,6 +58,7 @@ class FakeBackend(
 
     companion object {
         const val DEMO_OTP = "123456"
+        const val FREE_PROJECTS = 3
         val REPORT_LIFETIME: Duration = Duration.ofDays(90)
     }
 
@@ -153,6 +154,9 @@ class FakeBackend(
         io()
         val v = Validate.project(input).getOrElse { return Result.failure(it) }
         val org = state.value.org ?: return Result.failure(AppError.NotAllowed)
+        // same rule as the server's check_project_limit()
+        val active = state.value.projects.values.count { it.orgId == org.id && it.status != app.site.core.model.ProjectStatus.ARCHIVED }
+        if (org.plan == app.site.core.model.Plan.FREE && active >= FREE_PROJECTS) return Result.failure(AppError.PlanLimit("projects"))
         val p = Project(newId(), org.id, v.name, address = v.address, startDate = v.startDate, endDate = v.endDate)
         state.update { s -> s.copy(projects = s.projects + (p.id to p)) }
         event(p.id, ActivityVerb.CREATED_PROJECT, p.id, p.name)

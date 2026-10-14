@@ -44,8 +44,8 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Record screenshots
-        run: gradle :app:recordRoborazziDebug --no-daemon --stacktrace
+      - name: Flow tests and screenshots
+        run: gradle :app:recordRoborazziDebug --no-daemon --stacktrace --continue
 
       - name: Upload APK, screenshots and test reports
         if: always()
@@ -55,6 +55,7 @@ jobs:
           path: |
             site-app/app/build/outputs/apk/debug/*.apk
             site-app/app/build/clone-screens/
+            site-app/app/build/test-screens/
             site-app/app/build/reports/tests/
             site-app/core/build/reports/tests/
           if-no-files-found: ignore
@@ -65,9 +66,10 @@ jobs:
         if: github.event_name == 'push' && github.ref != 'refs/heads/main'
         working-directory: .
         run: |
-          mkdir -p replica/clone-screens
+          mkdir -p replica/clone-screens replica/test-screens
           cp site-app/app/build/clone-screens/*.png replica/clone-screens/
-          git add replica/clone-screens
+          cp site-app/app/build/test-screens/*.png replica/test-screens/ 2>/dev/null || true
+          git add replica/clone-screens replica/test-screens
           if git diff --cached --quiet; then
             echo "Screenshots unchanged."
           else
