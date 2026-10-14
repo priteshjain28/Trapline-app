@@ -39,7 +39,9 @@ import java.time.ZoneId
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w448dp-h997dp-xxhdpi")
+// 448x903dp: the app area of the reference phone (1344x2992 at 3x, minus its 63dp status bar and 31dp gesture bar),
+// so clone and original screenshots cover the same viewport for /replica-diff
+@Config(sdk = [34], qualifiers = "w448dp-h903dp-xxhdpi")
 class ScreenshotTest {
     @get:Rule val compose = createComposeRule()
 
@@ -47,6 +49,7 @@ class ScreenshotTest {
     private lateinit var container: AppContainer
     private lateinit var towerId: String
     private lateinit var brickworkId: String
+    private lateinit var officeId: String
 
     @Before fun setUp() {
         container = AppContainer(ApplicationProvider.getApplicationContext(), clock, latencyMs = 0, forceDemo = true)
@@ -55,6 +58,7 @@ class ScreenshotTest {
             container.session.completeProfile("Anita Rao", null).getOrThrow()
             towerId = container.projects.projects().first().first { it.name == "Green Park Tower B" }.id
             brickworkId = container.tasks.tasks(towerId).first().first { it.number == 2 }.id
+            officeId = container.projects.projects().first().first { it.name == "Site office renovation" }.id
         }
     }
 
@@ -82,6 +86,8 @@ class ScreenshotTest {
     @Test fun s06_report() = shot("S06") { shell(ProjectTab.REPORT)() }
     @Test fun s07_reports() = shot("S07") { ReportsScreen(towerId, {}) }
     @Test fun s08_tasks() = shot("S08") { shell(ProjectTab.TASKS)() }
+    // same state as the reference screenshot: a project with no tasks yet
+    @Test fun s08_tasksEmpty() = shot("S08-empty") { ProjectShell(officeId, ProjectTab.TASKS, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
     @Test fun s09_task() = shot("S09") { TaskDetailScreen(brickworkId, {}) }
     @Test fun s10_newTask() = shot("S10") { CreateTaskScreen(towerId, {}, {}) }
     @Test fun s12_material() = shot("S12") { shell(ProjectTab.MATERIAL)() }
