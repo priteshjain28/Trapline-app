@@ -600,3 +600,50 @@ class CompanyFlows : FlowTest() {
         assertEquals("Sharma Builders", container.session.session.value?.org?.name)
     }
 }
+
+/** F07: issues. Seed: #1 cracks near the lift lobby (open, on task #3), #2 water tanker (closed). */
+class IssueFlows : FlowTest() {
+    private fun openIssues() {
+        launch()
+        tap(text("Green Park Tower B"))
+        tap(tab("More"))
+        tap(button("Issues"))
+        waitFor("Open (1)")
+    }
+
+    @Test fun i_H1_listByStatus() {
+        openIssues()
+        assertTrue(shows("#1 Hairline cracks in plaster near the lift lobby"))
+        assertAccessible("S31 issues")
+        tap(tab("Closed (1)"))
+        waitFor("#2 Water tanker late two days running")
+        tap(tab("All (2)"))
+        assertTrue(shows("#1 Hairline cracks in plaster near the lift lobby"))
+    }
+
+    @Test fun i_H2_raiseCommentAndFix() {
+        openIssues()
+        tap(button("Raise issue"))
+        type("What's the problem", "Rebar exposed at column C4")
+        tap(named("Linked task: None"))
+        tap(text("#2 Brickwork level 3"))
+        tap(named("Who fixes it: Not assigned"))
+        tap(text("Ravi Singh"))
+        assertAccessible("raise issue")
+        tap(button("Raise issue"))
+        waitFor("Issue #3")
+        assertTrue(shows("Task: #2 Brickwork level 3"))
+        type("Add a comment", "Cover it before Friday's pour")
+        tap(button("Send"))
+        waitFor("Cover it before Friday's pour")
+        tap(button("Mark fixed"))
+        waitFor("Reopen")
+        assertAccessible("issue detail")
+    }
+
+    @Test fun i_N1_needsATitle() {
+        openIssues()
+        tap(button("Raise issue"))
+        button("Raise issue").assertIsNotEnabled()
+    }
+}

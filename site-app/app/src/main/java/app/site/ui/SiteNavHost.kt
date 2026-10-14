@@ -52,6 +52,9 @@ object Routes {
     const val GALLERY = "project/{pid}/gallery"
     const val TEAM = "project/{pid}/team"
     const val COMPANY = "company"
+    const val ISSUES = "project/{pid}/issues"
+    const val NEW_ISSUE = "project/{pid}/issues/new"
+    const val ISSUE = "project/{pid}/issue/{iid}"
     const val ALBUM = "project/{pid}/albums/{aid}"
 
     fun project(pid: String, tab: Int = 0) = "project/$pid?tab=$tab"
@@ -130,11 +133,26 @@ fun SiteNavHost(nav: NavHostController = rememberNavController()) {
                     when (it) {
                         Planned.GALLERY -> nav.navigate(Routes.gallery(projectId))
                         Planned.MEMBERS -> nav.navigate("project/$projectId/team")
+                        Planned.ISSUES -> nav.navigate("project/$projectId/issues")
                         else -> nav.navigate(Routes.planned(it))
                     }
                 },
                 onMaterial = { nav.navigate(Routes.material(projectId, it)) },
             )
+        }
+        composable(Routes.ISSUES, listOf(pid)) { e ->
+            val projectId = e.arguments?.getString("pid").orEmpty()
+            app.site.ui.issues.IssuesScreen(projectId, onBack = { nav.popBackStack() },
+                onNew = { nav.navigate("project/$projectId/issues/new") }, onOpen = { nav.navigate("project/$projectId/issue/$it") })
+        }
+        composable(Routes.NEW_ISSUE, listOf(pid)) { e ->
+            val projectId = e.arguments?.getString("pid").orEmpty()
+            app.site.ui.issues.NewIssueScreen(projectId, onBack = { nav.popBackStack() }, onCreated = {
+                nav.navigate("project/$projectId/issue/$it") { popUpTo(Routes.ISSUES) }
+            })
+        }
+        composable(Routes.ISSUE, listOf(pid, navArgument("iid") { type = NavType.StringType })) { e ->
+            app.site.ui.issues.IssueDetailScreen(e.arguments?.getString("iid").orEmpty(), onBack = { nav.popBackStack() })
         }
         composable(Routes.TEAM, listOf(pid)) { e ->
             TeamScreen(e.arguments?.getString("pid").orEmpty(), onBack = { nav.popBackStack() })

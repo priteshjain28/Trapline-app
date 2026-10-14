@@ -439,4 +439,38 @@
     <string name="action_new_category">New category</string>
     <string name="field_new_category">New category</string>
     <string name="action_add">Add</string>
+
+    <!-- issues (S31) -->
+    <string name="issues_open">Open (%1$d)</string>
+    <string name="issues_closed">Closed (%1$d)</string>
+    <string name="issues_all">All (%1$d)</string>
+    <string name="issues_search">Search issues</string>
+    <string name="issues_empty_title">No open issues</string>
+    <string name="issues_empty_body">Raise one when something on site needs fixing or deciding, and give it a date and an owner.</string>
+    <string name="issues_none_here">Nothing in this list</string>
+    <string name="action_raise_issue">Raise issue</string>
+    <string name="issue_new_title">Raise an issue</string>
+    <string name="field_issue_title">What\'s the problem</string>
+    <string name="field_issue_title_placeholder">Water leaking at slab 3, east corner</string>
+    <string name="field_issue_details">Details</string>
+    <string name="field_issue_details_placeholder">Where exactly, how bad, what you\'ve tried</string>
+    <string name="field_issue_task">Linked task</string>
+    <string name="field_issue_task_none">None</string>
+    <string name="field_assignee">Who fixes it</string>
+    <string name="field_assignee_none">Not assigned</string>
+    <string name="field_due">Fix by</string>
+    <string name="issue_status_open">Open</string>
+    <string name="issue_status_closed">Closed</string>
+    <string name="issue_overdue">Overdue</string>
+    <string name="issue_due">Fix by %1$s</string>
+    <string name="issue_number">Issue #%1$s</string>
+    <string name="issue_raised_by">Raised by %1$s, %2$s</string>
+    <string name="issue_comments">Comments</string>
+    <string name="issue_comments_none">No comments yet.</string>
+    <string name="field_comment">Add a comment</string>
+    <string name="action_send">Send</string>
+    <string name="action_close_issue">Mark fixed</string>
+    <string name="action_reopen_issue">Reopen</string>
+    <string name="issue_comment_count">%1$d comments</string>
+    <string name="issue_task_link">Task: %1$s</string>
 </resources>

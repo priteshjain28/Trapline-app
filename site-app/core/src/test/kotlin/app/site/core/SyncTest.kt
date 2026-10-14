@@ -318,6 +318,27 @@ class SyncTest {
         assertEquals(1, b.app.categories().first().count { it.equals("formwork", true) })
     }
 
+    @Test fun issuesAndCommentsSync() = runTest {
+        val a = Phone("9876543210").apply { signIn() }
+        val p = a.app.create(NewProject("Tower")).getOrThrow()
+        val t = a.app.create(NewTask(p.id, "Plaster")).getOrThrow()
+        a.sync()
+        a.net.offline = true
+        val i = a.app.raise(app.site.core.model.NewIssue(p.id, "Cracks near lift", taskId = t.id)).getOrThrow()
+        a.app.comment(i.id, "Refill Thursday").getOrThrow()
+        assertEquals(1, a.app.task(t.id).first()!!.openIssues)
+        assertNull(a.app.siteIssue(i.id).first()!!.number)
+        a.net.offline = false
+        a.sync()
+        assertEquals(1, a.app.siteIssue(i.id).first()!!.number, "numbered by the server")
+        assertEquals(1, server.rows("comments").size)
+        a.app.setStatus(i.id, app.site.core.model.IssueStatus.CLOSED).getOrThrow()
+        a.sync()
+        assertEquals("closed", server.rows("issues").single().s("status"))
+        assertTrue(server.rows("issues").single().s("closed_at") != null)
+        assertEquals(0, a.app.tasks(p.id).first().single().openIssues)
+    }
+
     @Test fun aPendingLocalChangeIsNotOverwrittenByAPull() = runTest {
         val a = Phone("9876543210").apply { signIn() }
         val p = a.app.create(NewProject("Tower")).getOrThrow()

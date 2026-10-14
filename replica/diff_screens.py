@@ -36,6 +36,7 @@ PAIRS = [
     ("S28", "S28-profile", ""),
     ("S30", "S30-gallery-media", ""),
     ("S29", "S29-organisation-edit", ""),
+    ("S31", "S31-issues", "different data: reference has its auto-raised issue, clone has the seed site"),
 ]
 
 

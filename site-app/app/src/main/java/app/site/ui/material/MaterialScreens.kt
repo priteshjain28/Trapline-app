@@ -233,7 +233,7 @@ private fun lines(drafts: List<Draft>) = drafts.map { MaterialLine(it.materialId
 
 /** Looks like a field, opens a picker. Named for screen readers by its label and current value. */
 @Composable
-private fun PickerField(label: String, value: String?, placeholder: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun PickerField(label: String, value: String?, placeholder: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = SiteTheme.colors
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Space.s1)) {
         Text(label, style = SiteTheme.type.sm.copy(fontWeight = FontWeight.W600), color = c.text)

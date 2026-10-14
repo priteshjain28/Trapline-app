@@ -120,7 +120,7 @@ class SyncedBackend(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository {
 
     private val q = db.siteQueries
 
@@ -134,7 +134,7 @@ class SyncedBackend(
             "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine,
             "material_issues" to q::deleteIssue, "material_issue_lines" to q::deleteIssueLine,
             "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum, "project_members" to q::deleteProjectMember,
-            "task_categories" to q::deleteCategory,
+            "task_categories" to q::deleteCategory, "issues" to q::deleteIssueRow, "comments" to q::deleteComment,
         ),
         restore = ::restore,
     )
@@ -344,8 +344,15 @@ class SyncedBackend(
 
     // ================================================================ tasks
 
-    override fun tasks(projectId: String): Flow<List<Task>> = q.tasks(projectId).asFlow().mapToList(io).map { it.map(::task) }
-    override fun task(id: String): Flow<Task?> = q.task(id).asFlow().mapToOneOrNull(io).map { it?.let(::task) }
+    override fun tasks(projectId: String): Flow<List<Task>> =
+        combine(q.tasks(projectId).asFlow().mapToList(io), q.openIssueCounts(projectId).asFlow().mapToList(io)) { rows, counts ->
+            val open = counts.associate { it.task_id to it.open_count.toInt() }
+            rows.map { task(it).copy(openIssues = open[it.id] ?: 0) }
+        }
+
+    override fun task(id: String): Flow<Task?> = q.task(id).asFlow().mapToOneOrNull(io).map { row ->
+        row?.let { r -> task(r).copy(openIssues = q.openIssueCounts(r.project_id).executeAsList().firstOrNull { it.task_id == r.id }?.open_count?.toInt() ?: 0) }
+    }
 
     override fun updates(taskId: String): Flow<List<TaskUpdate>> =
         // the second query only signals "photos changed" (an upload finished, a pull brought a storage path)
@@ -860,6 +867,78 @@ class SyncedBackend(
         syncNow()
     }
 
+    // ================================================================ issues
+
+    private fun issueOf(id: String, projectId: String, number: Long?, taskId: String?, title: String, description: String?, due: String?,
+                        assignee: String?, status: String, raisedBy: String?, created: String, closed: String?, comments: Long) =
+        app.site.core.model.Issue(id, projectId, number?.toInt(), title, description, taskId, due?.let(LocalDate::parse), assignee,
+            if (status == "closed") app.site.core.model.IssueStatus.CLOSED else app.site.core.model.IssueStatus.OPEN, raisedBy,
+            SyncEngine.parseInstant(created), closed?.let(SyncEngine::parseInstant), comments.toInt())
+
+    override fun siteIssues(projectId: String): Flow<List<app.site.core.model.Issue>> =
+        combine(q.siteIssues(projectId).asFlow().mapToList(io), q.commentsFor("").asFlow().mapToList(io)) { rows, _ ->
+            rows.map { issueOf(it.id, it.project_id, it.number, it.task_id, it.title, it.description, it.due_date, it.assignee_id, it.status,
+                it.raised_by, it.created_at, it.closed_at, it.comment_count) }
+        }
+
+    override fun siteIssue(id: String): Flow<app.site.core.model.Issue?> =
+        combine(q.siteIssue(id).asFlow().mapToOneOrNull(io), q.commentsFor(id).asFlow().mapToList(io)) { it, _ ->
+            it?.let { r -> issueOf(r.id, r.project_id, r.number, r.task_id, r.title, r.description, r.due_date, r.assignee_id, r.status,
+                r.raised_by, r.created_at, r.closed_at, r.comment_count) }
+        }
+
+    override fun comments(issueId: String): Flow<List<app.site.core.model.Comment>> =
+        q.commentsFor(issueId).asFlow().mapToList(io).map { rows ->
+            rows.map { app.site.core.model.Comment(it.id, it.issue_id.orEmpty(), it.author_id, it.body, SyncEngine.parseInstant(it.created_at)) }
+        }
+
+    override suspend fun raise(input: app.site.core.model.NewIssue): Result<app.site.core.model.Issue> = call {
+        val user = me()
+        val v = Validate.issue(input).getOrThrow()
+        q.project(v.projectId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        if (v.taskId != null && q.task(v.taskId).executeAsOneOrNull()?.project_id != v.projectId) throw AppError.Invalid("task", AppError.Reason.REQUIRED)
+        val row = app.site.core.local.Issue(newId(), v.projectId, null, v.taskId, v.title, v.description, v.dueDate?.toString(), v.assigneeId,
+            "open", user.id, now(), null)
+        db.transaction {
+            q.upsertIssueRow(row)
+            engine.enqueueUpsert("issues", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("title", row.title); putOrNull("description", row.description)
+                putOrNull("task_id", row.task_id); putOrNull("due_date", row.due_date); putOrNull("assignee_id", row.assignee_id)
+                put("raised_by", user.id)
+            })
+        }
+        syncNow()
+        issueOf(row.id, row.project_id, null, row.task_id, row.title, row.description, row.due_date, row.assignee_id, row.status, row.raised_by,
+            row.created_at, null, 0)
+    }
+
+    override suspend fun setStatus(issueId: String, status: app.site.core.model.IssueStatus): Result<Unit> = call {
+        val row = q.siteIssue(issueId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val s = status.name.lowercase()
+        if (row.status == s) return@call
+        val closedAt = if (status == app.site.core.model.IssueStatus.CLOSED) now() else null
+        db.transaction {
+            q.setIssueStatus(s, closedAt, issueId)
+            engine.enqueueUpdate("issues", issueId, mapOf("id" to "eq.$issueId"), buildJsonObject { put("status", s); putOrNull("closed_at", closedAt) })
+        }
+        syncNow()
+    }
+
+    override suspend fun comment(issueId: String, body: String): Result<app.site.core.model.Comment> = call {
+        val user = me()
+        val b = Validate.comment(body).getOrThrow()
+        val issue = q.siteIssue(issueId).executeAsOneOrNull() ?: throw AppError.NotAllowed
+        val row = app.site.core.local.Comment(newId(), issue.project_id, issueId, null, user.id, b, now())
+        db.transaction {
+            q.upsertComment(row)
+            engine.enqueueUpsert("comments", row.id, buildJsonObject {
+                put("id", row.id); put("project_id", row.project_id); put("issue_id", issueId); put("author_id", user.id); put("body", b)
+            })
+        }
+        syncNow()
+        app.site.core.model.Comment(row.id, issueId, user.id, b, SyncEngine.parseInstant(row.created_at))
+    }
+
     // ================================================================ feed
 
     override fun feed(projectId: String): Flow<List<ActivityEvent>> =
@@ -915,6 +994,15 @@ class SyncedBackend(
         }, { it.str("id") }),
         SyncEngine.PullSpec("task_categories", "id,org_id,name,updated_at", { o ->
             q.upsertCategory(app.site.core.local.Task_category(o.str("id"), o.str("org_id"), o.str("name")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("issues", "id,project_id,number,task_id,title,description,due_date,assignee_id,status,raised_by,created_at,closed_at,updated_at", { o ->
+            q.upsertIssueRow(app.site.core.local.Issue(o.str("id"), o.str("project_id"), o.lngOrNull("number"), o.strOrNull("task_id"), o.str("title"),
+                o.strOrNull("description"), o.strOrNull("due_date"), o.strOrNull("assignee_id"), o.str("status"), o.strOrNull("raised_by"),
+                o.str("created_at"), o.strOrNull("closed_at")))
+        }, { it.str("id") }),
+        SyncEngine.PullSpec("comments", "id,project_id,issue_id,task_id,author_id,body,created_at,updated_at", { o ->
+            q.upsertComment(app.site.core.local.Comment(o.str("id"), o.str("project_id"), o.strOrNull("issue_id"), o.strOrNull("task_id"),
+                o.strOrNull("author_id"), o.str("body"), o.str("created_at")))
         }, { it.str("id") }),
         SyncEngine.PullSpec("albums", "id,project_id,name,updated_at", { o ->
             q.upsertAlbum(AlbumRow(o.str("id"), o.str("project_id"), o.str("name")))
@@ -987,6 +1075,7 @@ class SyncedBackend(
         "materials" to q::deleteMaterial, "grns" to q::deleteGrn, "grn_lines" to q::deleteGrnLine, "material_issues" to q::deleteIssue,
         "material_issue_lines" to q::deleteIssueLine, "stock_adjustments" to q::deleteAdjustment, "albums" to q::deleteAlbum,
         "project_members" to q::deleteProjectMember, "org_members" to q::deleteOrgMember, "invites" to q::deleteInvite,
+        "issues" to q::deleteIssueRow, "comments" to q::deleteComment,
     )
 
     // ================================================================ errors

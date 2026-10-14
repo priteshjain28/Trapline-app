@@ -66,7 +66,7 @@ class FakeBackend(
     private val newId: () -> String = { UUID.randomUUID().toString() },
     seed: Boolean = true,
 ) : SessionRepository, ProjectRepository, TaskRepository, AttendanceRepository, ReportRepository, ActivityRepository,
-    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository {
+    PeopleRepository, SyncRepository, app.site.core.data.MaterialRepository, app.site.core.data.GalleryRepository, app.site.core.data.TeamRepository, app.site.core.data.IssueRepository {
 
     companion object {
         const val DEMO_OTP = "123456"
@@ -102,6 +102,9 @@ class FakeBackend(
         /** projectId -> pending invites */
         val invites: Map<String, List<app.site.core.model.PendingInvite>> = emptyMap(),
         val categories: List<String> = emptyList(),
+        /** Problems raised on site (S31); [issues] above is material issued to tasks. */
+        val siteIssues: Map<String, app.site.core.model.Issue> = emptyMap(),
+        val comments: Map<String, app.site.core.model.Comment> = emptyMap(),
     )
 
     /** A stock_adjustments row: [qty] is signed, like the server's. */
@@ -240,9 +243,13 @@ class FakeBackend(
     // ------------------------------------------------------------------ tasks
 
     override fun tasks(projectId: String): Flow<List<Task>> =
-        state.map { s -> s.tasks.values.filter { it.projectId == projectId }.sortedByDescending { it.number ?: Int.MAX_VALUE } }
+        state.map { s -> s.tasks.values.filter { it.projectId == projectId }.map { withIssues(s, it) }.sortedByDescending { it.number ?: Int.MAX_VALUE } }
 
-    override fun task(id: String): Flow<Task?> = state.map { it.tasks[id] }
+    override fun task(id: String): Flow<Task?> = state.map { s -> s.tasks[id]?.let { withIssues(s, it) } }
+
+    /** Open issues are counted from the issues themselves, like the server's view. */
+    private fun withIssues(s: State, t: Task) =
+        t.copy(openIssues = s.siteIssues.values.count { it.taskId == t.id && it.status == app.site.core.model.IssueStatus.OPEN })
 
     override fun updates(taskId: String): Flow<List<TaskUpdate>> =
         state.map { s -> s.updates.values.filter { it.taskId == taskId }.sortedByDescending { it.createdAt } }
@@ -616,6 +623,58 @@ class FakeBackend(
         if (!canManage(s, projectId) || s.projectMembers[projectId]?.containsKey(userId) != true) return Result.failure(AppError.NotAllowed)
         state.update { it.copy(projectMembers = it.projectMembers + (projectId to (it.projectMembers[projectId].orEmpty() - userId))) }
         return Result.success(Unit)
+    }
+
+    // ------------------------------------------------------------------ issues
+
+    private fun counted(s: State, i: app.site.core.model.Issue) = i.copy(commentCount = s.comments.values.count { it.issueId == i.id })
+
+    override fun siteIssues(projectId: String): Flow<List<app.site.core.model.Issue>> = state.map { s ->
+        s.siteIssues.values.filter { it.projectId == projectId }.map { counted(s, it) }.sortedByDescending { it.createdAt }
+    }
+
+    override fun siteIssue(id: String): Flow<app.site.core.model.Issue?> = state.map { s -> s.siteIssues[id]?.let { counted(s, it) } }
+
+    override fun comments(issueId: String): Flow<List<app.site.core.model.Comment>> =
+        state.map { s -> s.comments.values.filter { it.issueId == issueId }.sortedBy { it.createdAt } }
+
+    override suspend fun raise(input: app.site.core.model.NewIssue): Result<app.site.core.model.Issue> {
+        io()
+        val by = runCatching { me() }.getOrElse { return Result.failure(it) }
+        val v = Validate.issue(input).getOrElse { return Result.failure(it) }
+        val s0 = state.value
+        if (s0.projects[v.projectId] == null) return Result.failure(AppError.NotAllowed)
+        if (v.taskId != null && s0.tasks[v.taskId]?.projectId != v.projectId) return Result.failure(AppError.Invalid("task", AppError.Reason.REQUIRED))
+        var issue: app.site.core.model.Issue? = null
+        state.update { s ->
+            val n = (s.counters["site-issues|${v.projectId}"] ?: 0) + 1
+            val i = app.site.core.model.Issue(newId(), v.projectId, n, v.title, v.description, v.taskId, v.dueDate, v.assigneeId,
+                raisedBy = by.id, createdAt = clock.instant())
+            issue = i
+            s.copy(siteIssues = s.siteIssues + (i.id to i), counters = s.counters + ("site-issues|${v.projectId}" to n))
+        }
+        event(v.projectId, ActivityVerb.RAISED_ISSUE, issue!!.id, issue!!.title)
+        return Result.success(issue!!)
+    }
+
+    override suspend fun setStatus(issueId: String, status: app.site.core.model.IssueStatus): Result<Unit> {
+        io()
+        val i = state.value.siteIssues[issueId] ?: return Result.failure(AppError.NotAllowed)
+        if (i.status == status) return Result.success(Unit)
+        val closed = if (status == app.site.core.model.IssueStatus.CLOSED) clock.instant() else null
+        state.update { it.copy(siteIssues = it.siteIssues + (i.id to i.copy(status = status, closedAt = closed))) }
+        if (closed != null) event(i.projectId, ActivityVerb.CLOSED_ISSUE, i.id, i.title)
+        return Result.success(Unit)
+    }
+
+    override suspend fun comment(issueId: String, body: String): Result<app.site.core.model.Comment> {
+        io()
+        val by = runCatching { me() }.getOrElse { return Result.failure(it) }
+        val b = Validate.comment(body).getOrElse { return Result.failure(it) }
+        if (state.value.siteIssues[issueId] == null) return Result.failure(AppError.NotAllowed)
+        val c = app.site.core.model.Comment(newId(), issueId, by.id, b, clock.instant())
+        state.update { it.copy(comments = it.comments + (c.id to c)) }
+        return Result.success(c)
     }
 
     // ------------------------------------------------------------------ feed

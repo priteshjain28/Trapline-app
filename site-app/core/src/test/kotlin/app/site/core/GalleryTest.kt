@@ -111,3 +111,32 @@ class CategoryTest {
         assertIs<AppError.Invalid>(b.addCategory(" ").exceptionOrNull())
     }
 }
+
+class IssueTest {
+    private val clock = Clock.fixed(Instant.parse("2026-10-14T06:30:00Z"), ZoneId.of("Asia/Kolkata"))
+
+    @Test fun raiseCommentCloseAndTaskCounts() = runTest {
+        val b = FakeBackend(clock, latencyMs = 0)
+        b.verifyOtp("9812345678", FakeBackend.DEMO_OTP).getOrThrow()
+        val tower = b.projects().first().first { it.name == "Green Park Tower B" }
+        val plaster = b.tasks(tower.id).first().first { it.number == 3 }
+        assertEquals(1, plaster.openIssues, "the seeded open issue counts on its task")
+
+        val i = b.raise(app.site.core.model.NewIssue(tower.id, "  Rebar exposed at column C4 ", taskId = plaster.id,
+            dueDate = b.today().plusDays(1))).getOrThrow()
+        assertEquals(3, i.number)
+        assertEquals("Rebar exposed at column C4", i.title)
+        assertEquals(2, b.tasks(tower.id).first().first { it.id == plaster.id }.openIssues)
+        b.comment(i.id, "Cover with M25 before Friday").getOrThrow()
+        assertEquals(1, b.siteIssue(i.id).first()!!.commentCount)
+        b.setStatus(i.id, app.site.core.model.IssueStatus.CLOSED).getOrThrow()
+        assertEquals(1, b.tasks(tower.id).first().first { it.id == plaster.id }.openIssues)
+        assertTrue(b.siteIssue(i.id).first()!!.closedAt != null)
+        assertEquals(app.site.core.model.ActivityVerb.CLOSED_ISSUE, b.feed(tower.id).first().first().verb)
+        b.setStatus(i.id, app.site.core.model.IssueStatus.OPEN).getOrThrow()
+        assertEquals(null, b.siteIssue(i.id).first()!!.closedAt, "reopened")
+
+        assertIs<AppError.Invalid>(b.raise(app.site.core.model.NewIssue(tower.id, "   ")).exceptionOrNull())
+        assertIs<AppError.Invalid>(b.comment(i.id, " ").exceptionOrNull())
+    }
+}

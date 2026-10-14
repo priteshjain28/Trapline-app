@@ -55,7 +55,6 @@ internal object Seed {
         update(tasks[1], 1, 110.0, null, "Waiting on bricks for the north side.", ravi)
         update(tasks[2], 4, 300.0, null, "Internal plaster, flats 201-204.", meena)
         update(tasks[4], 12, null, 100, "Cleared and levelled.", meena)
-        tasks = tasks.map { if (it.number == 3 && it.projectId == tower.id) it.copy(openIssues = 1) else it }
 
         val workers = listOf(
             Worker(newId(), tower.id, "Suresh Kumar", "Mason", "+919811111111", wagePaise = 80_000, otRatePaise = 10_000),
@@ -119,6 +118,17 @@ internal object Seed {
         val opening = FakeBackend.Adjustment(newId(), tower.id, cement.id, app.site.core.model.StockEntryKind.OPENING, 40.0,
             today.minusDays(30), null, "Left from the slab pour", at(today.minusDays(30), 18))
 
+        // issues: one open on the plaster (behind schedule), one closed
+        val plasterTask = tasks.first { it.projectId == tower.id && it.number == 3 }
+        val crack = app.site.core.model.Issue(newId(), tower.id, 1, "Hairline cracks in plaster near the lift lobby",
+            "Second floor, both sides of the lift. Check before the next coat.", plasterTask.id, today.plusDays(2), meena.id,
+            raisedBy = ravi.id, createdAt = at(today.minusDays(3), 11))
+        val water = app.site.core.model.Issue(newId(), tower.id, 2, "Water tanker late two days running", null, null, null, null,
+            app.site.core.model.IssueStatus.CLOSED, ravi.id, at(today.minusDays(9), 8), at(today.minusDays(8), 16))
+        val crackReply = app.site.core.model.Comment(newId(), crack.id, meena.id, "Seen it. Mason will cut and refill on Thursday.",
+            at(today.minusDays(2), 10))
+        events += ActivityEvent(newId(), tower.id, ravi.id, ravi.name, ActivityVerb.RAISED_ISSUE, crack.id, crack.title, crack.createdAt)
+
         val projects = listOf(tower, villas, office).map { p ->
             p.copy(progressPct = Progress.project(tasks.filter { it.projectId == p.id }))
         }
@@ -131,7 +141,9 @@ internal object Seed {
             workers = workers.associateBy { it.id },
             attendance = attendance,
             events = events,
-            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1, "grns|${tower.id}" to 2, "issues|${tower.id}" to 2),
+            counters = mapOf("tasks|${tower.id}" to 4, "tasks|${villas.id}" to 1, "grns|${tower.id}" to 2, "issues|${tower.id}" to 2, "site-issues|${tower.id}" to 2),
+            siteIssues = listOf(crack, water).associateBy { it.id },
+            comments = mapOf(crackReply.id to crackReply),
             materials = materials.associateBy { it.id },
             grns = grns.associateBy { it.id },
             issues = issues.associateBy { it.id },

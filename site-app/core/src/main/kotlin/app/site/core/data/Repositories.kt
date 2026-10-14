@@ -174,3 +174,15 @@ interface TeamRepository {
     suspend fun setRole(projectId: String, userId: String, role: app.site.core.model.ProjectRole): Result<Unit>
     suspend fun remove(projectId: String, userId: String): Result<Unit>
 }
+
+/** Issues raised on a site and the conversation on each. */
+interface IssueRepository {
+    /** Newest first. (Material handed out is MaterialRepository.issues.) */
+    fun siteIssues(projectId: String): Flow<List<app.site.core.model.Issue>>
+    fun siteIssue(id: String): Flow<app.site.core.model.Issue?>
+    /** Oldest first, like a conversation. */
+    fun comments(issueId: String): Flow<List<app.site.core.model.Comment>>
+    suspend fun raise(input: app.site.core.model.NewIssue): Result<app.site.core.model.Issue>
+    suspend fun setStatus(issueId: String, status: app.site.core.model.IssueStatus): Result<Unit>
+    suspend fun comment(issueId: String, body: String): Result<app.site.core.model.Comment>
+}

@@ -158,6 +158,33 @@ CREATE TABLE invite (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE issue (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  task_id TEXT,
+  title TEXT NOT NULL,
+  description TEXT,
+  due_date TEXT,
+  assignee_id TEXT,
+  status TEXT NOT NULL,
+  raised_by TEXT,
+  created_at TEXT NOT NULL,
+  closed_at TEXT
+);
+CREATE INDEX issue_project ON issue(project_id);
+
+CREATE TABLE comment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  issue_id TEXT,
+  task_id TEXT,
+  author_id TEXT,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX comment_issue ON comment(issue_id);
+
 -- Material. Stock is never stored: it is the sum of these rows, like the server's stock_movements ledger.
 CREATE TABLE material (
   id TEXT NOT NULL PRIMARY KEY,
@@ -405,6 +432,29 @@ SELECT * FROM invite WHERE project_id = ? AND accepted_at IS NULL ORDER BY creat
 deleteInvite:
 DELETE FROM invite WHERE id = ?;
 
+-- ---------------------------------------------------------------- issues
+
+upsertIssueRow:
+INSERT OR REPLACE INTO issue VALUES ?;
+siteIssues:
+SELECT i.*, (SELECT count(*) FROM comment c WHERE c.issue_id = i.id) AS comment_count
+FROM issue i WHERE i.project_id = ? ORDER BY i.created_at DESC;
+siteIssue:
+SELECT i.*, (SELECT count(*) FROM comment c WHERE c.issue_id = i.id) AS comment_count FROM issue i WHERE i.id = ?;
+setIssueStatus:
+UPDATE issue SET status = ?, closed_at = ? WHERE id = ?;
+openIssueCounts:
+SELECT task_id, count(*) AS open_count FROM issue WHERE project_id = ? AND status = 'open' AND task_id IS NOT NULL GROUP BY task_id;
+deleteIssueRow:
+DELETE FROM issue WHERE id = ?;
+
+upsertComment:
+INSERT OR REPLACE INTO comment VALUES ?;
+commentsFor:
+SELECT * FROM comment WHERE issue_id = ? ORDER BY created_at;
+deleteComment:
+DELETE FROM comment WHERE id = ?;
+
 -- ---------------------------------------------------------------- material
 
 upsertMaterial:
@@ -498,6 +548,8 @@ wipe {
   DELETE FROM task_update;
   DELETE FROM media;
   DELETE FROM album;
+  DELETE FROM issue;
+  DELETE FROM comment;
   DELETE FROM task_category;
   DELETE FROM org_member;
   DELETE FROM project_member;

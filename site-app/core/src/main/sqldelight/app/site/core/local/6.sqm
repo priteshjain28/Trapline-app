@@ -1,0 +1,29 @@
+-- Version 6 -> 7: issues and their comments (S31).
+
+CREATE TABLE issue (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  number INTEGER,
+  task_id TEXT,
+  title TEXT NOT NULL,
+  description TEXT,
+  due_date TEXT,
+  assignee_id TEXT,
+  status TEXT NOT NULL,
+  raised_by TEXT,
+  created_at TEXT NOT NULL,
+  closed_at TEXT
+);
+CREATE INDEX issue_project ON issue(project_id);
+
+CREATE TABLE comment (
+  id TEXT NOT NULL PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  issue_id TEXT,
+  task_id TEXT,
+  author_id TEXT,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX comment_issue ON comment(issue_id);
+

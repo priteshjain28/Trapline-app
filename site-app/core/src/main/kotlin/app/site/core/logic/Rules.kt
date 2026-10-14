@@ -82,6 +82,22 @@ object Validate {
         else -> Result.success(lines.groupBy { it.materialId }.map { (id, ls) -> app.site.core.model.MaterialLine(id, ls.sumOf { it.qty }) })
     }
 
+    const val ISSUE_TITLE_MAX = 200
+    const val COMMENT_MAX = 4000
+
+    fun issue(i: app.site.core.model.NewIssue): Result<app.site.core.model.NewIssue> = when {
+        i.title.isBlank() -> fail("title", Reason.REQUIRED)
+        i.title.trim().length > ISSUE_TITLE_MAX -> fail("title", Reason.TOO_LONG)
+        (i.description?.trim()?.length ?: 0) > COMMENT_MAX -> fail("description", Reason.TOO_LONG)
+        else -> Result.success(i.copy(title = i.title.trim(), description = i.description?.trim()?.ifBlank { null }))
+    }
+
+    fun comment(body: String): Result<String> = when {
+        body.isBlank() -> fail("body", Reason.REQUIRED)
+        body.trim().length > COMMENT_MAX -> fail("body", Reason.TOO_LONG)
+        else -> Result.success(body.trim())
+    }
+
     const val CATEGORY_MAX = 60
 
     fun category(name: String): Result<String> {
